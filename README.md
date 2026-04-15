@@ -63,17 +63,20 @@ Rechtsklick auf das Symbol öffnet ein Menü mit weiteren Optionen.
 
 ---
 
-## Die zwei Modi
+## Die Modi
 
-Blitztext hat zwei Arbeitsmodi, zwischen denen du jederzeit wechseln kannst:
+Blitztext hat drei Arbeitsmodi, wählbar in den Einstellungen oder per Schnellwechsel im Tray-Menü.
 
 **Direkt** (Standard)
-Deine Worte werden ohne Änderungen in Text umgewandelt und eingefügt. Schnell, funktioniert ohne Internet.
+Deine Worte werden ohne Änderungen in Text umgewandelt und eingefügt. Schnell, funktioniert komplett offline ohne Internet.
 
-**Poliert** (optional)
-Der transkribierte Text wird zusätzlich von einer KI überarbeitet: Satzzeichen werden gesetzt, Formulierungen geglättet, Tippfehler korrigiert. Erfordert einen Claude-API-Key (siehe unten).
+**Poliert – Konservativ** (optional, erfordert Claude-API-Key)
+Eine KI überarbeitet den Text minimal: Füllwörter werden entfernt („ähm", „also", „sozusagen"), offensichtliche Grammatikfehler und Wortwiederholungen werden korrigiert. Dein Stil, deine Wortwahl und deine Satzstruktur bleiben erhalten. Gut für alltägliche Texte, Notizen, kurze Nachrichten.
 
-Modus wechseln: Rechtsklick auf das Tray-Symbol → **„→ Poliert wechseln"** (oder umgekehrt).
+**Poliert – Ausgefeilt** (optional, erfordert Claude-API-Key)
+Der Text wird vollständig überarbeitet: saubere Formulierungen, korrekte Zeichensetzung, sinnvolle Absätze. E-Mails werden automatisch korrekt formatiert – Anrede, Fließtext und Grußzeile werden sauber abgesetzt. Gut für formelle Texte und E-Mails.
+
+Schnellwechsel: Rechtsklick auf das Tray-Symbol → **„zu Poliert wechseln"** (wechselt zwischen Direkt und Poliert – Konservativ). Für den Ausgefeilt-Modus einmal in die Einstellungen gehen.
 
 ---
 
@@ -86,12 +89,12 @@ Rechtsklick auf das Tray-Symbol → **„Einstellungen …"**
 | Hotkey | Tastenkürzel ändern (Standard: Strg+Umschalt+Leertaste) |
 | Sprache | Sprache der Aufnahme (Standard: Deutsch) |
 | Whisper-Modell | Genauigkeit vs. Geschwindigkeit (Standard: small) |
-| Claude API Key | Nötig für den Poliert-Modus |
+| Claude API Key | Nötig für die Poliert-Modi (Konservativ und Ausgefeilt) |
 | Autostart | Beim Windows-Start automatisch starten |
 
 ---
 
-## Claude API Key (für den Poliert-Modus)
+## Claude API Key (für die Poliert-Modi)
 
 Den Poliert-Modus brauchst du nicht, wenn dir der Direkt-Modus reicht. Falls du ihn nutzen möchtest:
 
