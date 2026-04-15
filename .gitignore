@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtuelle Umgebungen
+.venv/
+venv/
+env/
+
+# Secrets / API Keys
+*.txt
+!requirements.txt
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
+
+# Build
+dist/
+build/
+*.spec
+*.exe

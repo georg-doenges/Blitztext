@@ -1,0 +1,15 @@
+# Blitztext – Abhängigkeiten
+# WICHTIG: PyTorch mit CUDA NICHT hier eintragen.
+#          Torch muss separat mit CUDA-Unterstützung installiert sein:
+#          pip install torch --index-url https://download.pytorch.org/whl/cu121
+#          Danach erst diese Datei installieren:
+#          pip install -r requirements.txt
+
+pystray>=0.19.5
+pynput>=1.7.6
+sounddevice>=0.4.6
+numpy>=1.24.0
+openai-whisper>=20240930
+pyperclip>=1.8.2
+anthropic>=0.26.0
+Pillow>=10.0.0
