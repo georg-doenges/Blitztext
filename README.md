@@ -1,0 +1,124 @@
+# Blitztext – Sprache zu Text
+
+Blitztext ist ein kleines Programm für Windows, das im Hintergrund läuft und per Tastenkürzel eine Sprachaufnahme startet. Was du sagst, wird automatisch in Text umgewandelt und direkt in das Programm eingefügt, in dem du gerade arbeitest – zum Beispiel Word, Outlook oder ein Browser-Textfeld.
+
+---
+
+## Was du brauchst
+
+- Windows 10 oder Windows 11
+- Ein Mikrofon (eingebaut oder extern)
+- Python 3.10, 3.11 oder 3.12 → [python.org/downloads](https://www.python.org/downloads/)
+- Git → [git-scm.com](https://git-scm.com/download/win)
+- Internetverbindung (nur für die Installation)
+
+---
+
+## Installation
+
+1. Lade die Datei `install.ps1` herunter (oder bekomme sie von der Person, die dir Blitztext empfohlen hat).
+2. Mache einen **Rechtsklick** auf `install.ps1` und wähle **„Mit PowerShell ausführen"**.
+3. Falls Windows fragt, ob das Skript ausgeführt werden soll: **Ja** klicken.
+4. Das Skript läuft automatisch durch. Es dauert ein paar Minuten, weil es zunächst das Spracherkennungs-Modell herunterlädt.
+5. Am Ende kannst du wählen, ob Blitztext automatisch beim Start von Windows geöffnet werden soll.
+
+Nach der Installation liegt eine Verknüpfung **„Blitztext"** auf deinem Desktop.
+
+### Hinweis zu Python
+
+Beim Installieren von Python unbedingt den Haken bei **„Add Python to PATH"** setzen:
+
+```
+[✓] Add Python to PATH
+```
+
+---
+
+## Benutzung
+
+### Starten
+
+Doppelklick auf **„Blitztext"** auf dem Desktop. Das Programm erscheint als kleines Symbol in der **Taskleiste unten rechts** (neben der Uhr). Ein Konsolenfenster öffnet sich nicht.
+
+### Aufnahme starten und stoppen
+
+| Aktion | Tastenkürzel |
+|---|---|
+| Aufnahme starten | **Strg + Umschalt + Leertaste** |
+| Aufnahme stoppen | **Strg + Umschalt + Leertaste** (nochmal) |
+
+Der Text erscheint danach automatisch dort, wo du zuletzt getippt hast.
+
+### Das Symbol in der Taskleiste
+
+Das Symbol zeigt an, was Blitztext gerade macht:
+
+| Farbe | Bedeutung |
+|---|---|
+| **Grau** | Bereit – wartet auf den Hotkey |
+| **Rot** | Nimmt auf |
+| **Blau** | Verarbeitet die Aufnahme |
+
+Rechtsklick auf das Symbol öffnet ein Menü mit weiteren Optionen.
+
+---
+
+## Die zwei Modi
+
+Blitztext hat zwei Arbeitsmodi, zwischen denen du jederzeit wechseln kannst:
+
+**Direkt** (Standard)
+Deine Worte werden ohne Änderungen in Text umgewandelt und eingefügt. Schnell, funktioniert ohne Internet.
+
+**Poliert** (optional)
+Der transkribierte Text wird zusätzlich von einer KI überarbeitet: Satzzeichen werden gesetzt, Formulierungen geglättet, Tippfehler korrigiert. Erfordert einen Claude-API-Key (siehe unten).
+
+Modus wechseln: Rechtsklick auf das Tray-Symbol → **„→ Poliert wechseln"** (oder umgekehrt).
+
+---
+
+## Einstellungen
+
+Rechtsklick auf das Tray-Symbol → **„Einstellungen …"**
+
+| Einstellung | Beschreibung |
+|---|---|
+| Hotkey | Tastenkürzel ändern (Standard: Strg+Umschalt+Leertaste) |
+| Sprache | Sprache der Aufnahme (Standard: Deutsch) |
+| Whisper-Modell | Genauigkeit vs. Geschwindigkeit (Standard: small) |
+| Claude API Key | Nötig für den Poliert-Modus |
+| Autostart | Beim Windows-Start automatisch starten |
+
+---
+
+## Claude API Key (für den Poliert-Modus)
+
+Den Poliert-Modus brauchst du nicht, wenn dir der Direkt-Modus reicht. Falls du ihn nutzen möchtest:
+
+1. Gehe auf [console.anthropic.com](https://console.anthropic.com) und erstelle ein Konto.
+2. Erstelle einen API Key.
+3. Trage ihn in den Einstellungen von Blitztext ein.
+
+---
+
+## Häufige Fragen
+
+**Das Symbol erscheint nicht in der Taskleiste.**
+Klicke auf den kleinen Pfeil `^` neben der Uhr – das Symbol könnte dort versteckt sein. Du kannst es per Drag & Drop dauerhaft sichtbar machen.
+
+**Der Text wird nicht eingefügt.**
+Klicke einmal in das Textfeld, bevor du den Hotkey drückst, damit das richtige Fenster aktiv ist.
+
+**Blitztext reagiert nicht sofort nach dem Start.**
+Das Spracherkennungs-Modell wird beim ersten Start geladen – das dauert einen Moment. Sobald es bereit ist, erscheint eine kleine Benachrichtigung: *„Whisper bereit – Hotkey aktiv."*
+
+**In der Eingabeaufforderung (cmd) funktioniert das Einfügen nicht.**
+Das ist eine bekannte Einschränkung. In normalen Programmen wie Word, Outlook oder dem Browser funktioniert alles problemlos.
+
+---
+
+## Deinstallation
+
+1. Den Ordner `Blitztext` im Benutzerverzeichnis löschen (`C:\Users\DeinName\Blitztext`).
+2. Die Verknüpfung auf dem Desktop löschen.
+3. Falls Autostart eingerichtet: `shell:startup` im Explorer öffnen und die Blitztext-Verknüpfung dort löschen.
