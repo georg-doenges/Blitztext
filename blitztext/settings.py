@@ -21,7 +21,7 @@ def _config_path() -> str:
 @dataclass
 class Settings:
     hotkey: str = "ctrl+shift+space"
-    mode: str = "direkt"          # "direkt" | "poliert"
+    mode: str = "direkt"          # "direkt" | "poliert_konservativ" | "poliert_ausgefeilt"
     claude_api_key: str = ""
     autostart: bool = False
     language: str = "de"          # Whisper-Sprachcode oder "" für auto-detect
@@ -37,6 +37,9 @@ def load() -> Settings:
             data = json.load(f)
         defaults = asdict(Settings())
         defaults.update({k: v for k, v in data.items() if k in defaults})
+        # Rückwärtskompatibilität: altes "poliert" → "poliert_konservativ"
+        if defaults.get("mode") == "poliert":
+            defaults["mode"] = "poliert_konservativ"
         return Settings(**defaults)
     except Exception:
         return Settings()

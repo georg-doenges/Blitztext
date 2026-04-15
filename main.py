@@ -171,9 +171,9 @@ class BlitztextApp:
                     continue
 
                 # Modus
-                if self._settings.mode == "poliert":
+                if self._settings.mode in ("poliert_konservativ", "poliert_ausgefeilt"):
                     try:
-                        text = self._claude.reformulate(text)
+                        text = self._claude.reformulate(text, mode=self._settings.mode)
                         log.info("Claude-Ergebnis: %r", text)
                     except MissingAPIKeyError:
                         self._tray.notify(
@@ -216,7 +216,7 @@ class BlitztextApp:
 
     def _toggle_mode(self) -> None:
         self._settings.mode = (
-            "poliert" if self._settings.mode == "direkt" else "direkt"
+            "poliert_konservativ" if self._settings.mode == "direkt" else "direkt"
         )
         settings_mod.save(self._settings)
         self._tray.update_settings(self._settings)

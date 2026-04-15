@@ -138,14 +138,13 @@ class TrayApp:
     # ------------------------------------------------------------------
 
     def _build_menu(self) -> pystray.Menu:
-        mode_label = (
-            "Modus: Direkt  ✓" if self._settings.mode == "direkt"
-            else "Modus: Poliert ✓"
-        )
-        toggle_label = (
-            "→ Poliert wechseln" if self._settings.mode == "direkt"
-            else "→ Direkt wechseln"
-        )
+        _mode_labels = {
+            "direkt":              "Modus: Direkt  ✓",
+            "poliert_konservativ": "Modus: Poliert – Konservativ  ✓",
+            "poliert_ausgefeilt":  "Modus: Poliert – Ausgefeilt  ✓",
+        }
+        mode_label = _mode_labels.get(self._settings.mode, "Modus: Direkt  ✓")
+        toggle_label = "→ Direkt wechseln" if self._settings.mode != "direkt" else "→ Poliert wechseln"
         state_item = pystray.MenuItem(
             f"Status: {_STATE_LABELS[self._state]}",
             None,

@@ -99,16 +99,27 @@ class SettingsWindow(tk.Tk):
         self._hotkey_hint.grid(row=1, column=0, columnspan=3, **pad)
 
         # --- Modus ---
-        ttk.Label(self, text="Modus:").grid(row=2, column=0, sticky="w", **pad)
+        ttk.Label(self, text="Modus:").grid(row=2, column=0, sticky="nw", **pad)
         self._mode_var = tk.StringVar(value=self._settings.mode)
         mode_frame = ttk.Frame(self)
         mode_frame.grid(row=2, column=1, columnspan=2, sticky="w", **pad)
+
         ttk.Radiobutton(
-            mode_frame, text="Direkt", variable=self._mode_var, value="direkt"
-        ).pack(side="left", padx=4)
+            mode_frame, text="Direkt",
+            variable=self._mode_var, value="direkt",
+        ).grid(row=0, column=0, columnspan=2, sticky="w")
+
+        ttk.Label(mode_frame, text="Poliert (Claude):", foreground="gray").grid(
+            row=1, column=0, columnspan=2, sticky="w", pady=(6, 2)
+        )
         ttk.Radiobutton(
-            mode_frame, text="Poliert (Claude)", variable=self._mode_var, value="poliert"
-        ).pack(side="left", padx=4)
+            mode_frame, text="Konservativ  (nur Fehler & Füllwörter)",
+            variable=self._mode_var, value="poliert_konservativ",
+        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=(16, 0))
+        ttk.Radiobutton(
+            mode_frame, text="Ausgefeilt  (vollständige Überarbeitung, E-Mail-Format)",
+            variable=self._mode_var, value="poliert_ausgefeilt",
+        ).grid(row=3, column=0, columnspan=2, sticky="w", padx=(16, 0))
 
         # --- Claude API Key ---
         ttk.Label(self, text="Claude API Key:").grid(row=3, column=0, sticky="w", **pad)
