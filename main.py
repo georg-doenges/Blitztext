@@ -18,7 +18,7 @@ import os
 import queue
 import threading
 
-from blitztext import settings as settings_mod
+from blitztext import overlay, settings as settings_mod
 
 
 def _setup_logging() -> None:
@@ -225,5 +225,6 @@ class BlitztextApp:
 
 
 if __name__ == "__main__":
+    overlay.start()
     app = BlitztextApp()
     app.run()

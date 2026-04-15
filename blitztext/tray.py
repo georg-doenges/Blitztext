@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Callable, Optional
 import pystray
 from PIL import Image, ImageDraw
 
+from blitztext import overlay
+
 if TYPE_CHECKING:
     from blitztext.settings import Settings
 
@@ -118,10 +120,11 @@ class TrayApp:
         self._icon.icon = _ICONS[state]
         self._icon.title = f"Blitztext – {_STATE_LABELS[state]}"
         self._rebuild_menu()
+        overlay.set_recording(state == RECORDING)
 
     def notify(self, title: str, message: str) -> None:
-        """Zeigt eine Windows-Tray-Benachrichtigung."""
-        self._icon.notify(message, title)
+        """Zeigt eine Auto-Close-Benachrichtigung (schließt sich nach 4 s)."""
+        overlay.notify(title, message)
 
     def update_settings(self, settings: "Settings") -> None:
         self._settings = settings
