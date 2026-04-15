@@ -84,7 +84,7 @@ class SettingsWindow(tk.Tk):
         ttk.Label(self, text="Tastenkombination:").grid(
             row=0, column=0, sticky="w", **pad
         )
-        self._hotkey_var = tk.StringVar(value=self._settings.hotkey)
+        self._hotkey_var = tk.StringVar(master=self, value=self._settings.hotkey)
         self._hotkey_entry = ttk.Entry(
             self, textvariable=self._hotkey_var, width=24, state="readonly"
         )
@@ -100,7 +100,7 @@ class SettingsWindow(tk.Tk):
 
         # --- Modus ---
         ttk.Label(self, text="Modus:").grid(row=2, column=0, sticky="nw", **pad)
-        self._mode_var = tk.StringVar(value=self._settings.mode)
+        self._mode_var = tk.StringVar(master=self, value=self._settings.mode)
         mode_frame = ttk.Frame(self)
         mode_frame.grid(row=2, column=1, columnspan=2, sticky="w", **pad)
 
@@ -123,7 +123,7 @@ class SettingsWindow(tk.Tk):
 
         # --- Claude API Key ---
         ttk.Label(self, text="Claude API Key:").grid(row=3, column=0, sticky="w", **pad)
-        self._api_key_var = tk.StringVar(value=self._settings.claude_api_key)
+        self._api_key_var = tk.StringVar(master=self, value=self._settings.claude_api_key)
         self._api_entry = ttk.Entry(
             self, textvariable=self._api_key_var, show="*", width=32
         )
@@ -137,7 +137,7 @@ class SettingsWindow(tk.Tk):
         ttk.Label(self, text="Sprache (Whisper):").grid(
             row=4, column=0, sticky="w", **pad
         )
-        self._lang_var = tk.StringVar(value=self._settings.language)
+        self._lang_var = tk.StringVar(master=self, value=self._settings.language)
         lang_cb = ttk.Combobox(
             self,
             textvariable=self._lang_var,
@@ -152,7 +152,7 @@ class SettingsWindow(tk.Tk):
 
         # --- Autostart ---
         from blitztext import autostart
-        self._autostart_var = tk.BooleanVar(value=autostart.is_enabled())
+        self._autostart_var = tk.BooleanVar(master=self, value=autostart.is_enabled())
         ttk.Checkbutton(
             self, text="Mit Windows starten", variable=self._autostart_var
         ).grid(row=5, column=0, columnspan=3, sticky="w", **pad)

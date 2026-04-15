@@ -144,7 +144,7 @@ class TrayApp:
             "poliert_ausgefeilt":  "Modus: Poliert – Ausgefeilt  ✓",
         }
         mode_label = _mode_labels.get(self._settings.mode, "Modus: Direkt  ✓")
-        toggle_label = "→ Direkt wechseln" if self._settings.mode != "direkt" else "→ Poliert wechseln"
+        toggle_label = "zu Direkt wechseln" if self._settings.mode != "direkt" else "zu Poliert wechseln"
         state_item = pystray.MenuItem(
             f"Status: {_STATE_LABELS[self._state]}",
             None,
