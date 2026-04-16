@@ -8,25 +8,25 @@ Blitztext ist ein kleines Programm für Windows, das im Hintergrund läuft und p
 
 - Windows 10 oder Windows 11
 - Ein Mikrofon (eingebaut oder extern)
-- Python 3.10, 3.11 oder 3.12 → [python.org/downloads](https://www.python.org/downloads/)
-- Git → [git-scm.com](https://git-scm.com/download/win)
 - Internetverbindung (nur für die Installation)
+
+Python und Git werden beim ersten Start automatisch erkannt. Falls sie noch nicht installiert sind, zeigt das Installationsskript, wo du sie herbekommst.
 
 ---
 
 ## Installation
 
-1. Lade die Datei `install.ps1` herunter (oder bekomme sie von der Person, die dir Blitztext empfohlen hat).
-2. Mache einen **Rechtsklick** auf `install.ps1` und wähle **„Mit PowerShell ausführen"**.
-3. Falls Windows fragt, ob das Skript ausgeführt werden soll: **Ja** klicken.
-4. Das Skript läuft automatisch durch. Es dauert ein paar Minuten, weil es zunächst das Spracherkennungs-Modell herunterlädt.
+1. Lade die Datei **`install.bat`** herunter – du bekommst sie von der Person, die dir Blitztext empfohlen hat, oder direkt von [github.com/georg-doenges/Blitztext](https://github.com/georg-doenges/Blitztext).
+2. **Doppelklick** auf `install.bat`.
+3. Ein schwarzes Fenster öffnet sich kurz, dann startet das Installationsprogramm.
+4. Folge den Anweisungen auf dem Bildschirm. Die Installation dauert ein paar Minuten.
 5. Am Ende kannst du wählen, ob Blitztext automatisch beim Start von Windows geöffnet werden soll.
 
 Nach der Installation liegt eine Verknüpfung **„Blitztext"** auf deinem Desktop.
 
-### Hinweis zu Python
+### Falls Python oder Git fehlen
 
-Beim Installieren von Python unbedingt den Haken bei **„Add Python to PATH"** setzen:
+Das Installationsskript prüft beides automatisch. Wenn etwas fehlt, bekommst du einen direkten Link zum Download. Wichtig beim Installieren von Python: den Haken bei **„Add Python to PATH"** setzen:
 
 ```
 [✓] Add Python to PATH
