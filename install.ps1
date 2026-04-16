@@ -130,23 +130,17 @@ Write-Step "Weitere Pakete werden installiert ..."
 Write-OK "Alle Pakete installiert"
 
 # -----------------------------------------------------------------------
-# 7. Starter-VBS und Desktop-Verkuepfung erstellen
+# 7. Desktop-Verkuepfung erstellen
 # -----------------------------------------------------------------------
 Write-Step "Desktop-Verkuepfung wird erstellt ..."
 
-# VBS-Launcher (startet ohne Konsolenfenster)
-$vbsPath = "$InstallDir\start_blitztext.vbs"
-$vbsContent = "Set WshShell = CreateObject(""WScript.Shell"")" + "`r`n" +
-              "WshShell.Run Chr(34) & ""$venvPythonW"" & Chr(34) & "" "" & Chr(34) & ""$InstallDir\main.py"" & Chr(34), 0, False"
-Set-Content -Path $vbsPath -Value $vbsContent -Encoding UTF8
-
-# .lnk auf dem Desktop
+# .lnk direkt auf pythonw.exe (kein Konsolenfenster, kein VBS noetig)
 $desktopPath  = [Environment]::GetFolderPath("Desktop")
 $shortcutPath = "$desktopPath\Blitztext.lnk"
 $wsh = New-Object -ComObject WScript.Shell
 $shortcut = $wsh.CreateShortcut($shortcutPath)
-$shortcut.TargetPath       = "wscript.exe"
-$shortcut.Arguments        = "`"$vbsPath`""
+$shortcut.TargetPath       = $venvPythonW
+$shortcut.Arguments        = "`"$InstallDir\main.py`""
 $shortcut.WorkingDirectory = $InstallDir
 $shortcut.Description      = "Blitztext – Sprache zu Text"
 $shortcut.Save()
