@@ -1,4 +1,4 @@
-# Blitztext – Installer
+# Blitztext - Installer
 # Laedt Blitztext von GitHub, richtet die Umgebung ein und erstellt eine Desktop-Verkuepfung.
 # Ausfuehren mit: Rechtsklick -> "Mit PowerShell ausfuehren"
 
@@ -67,7 +67,7 @@ try {
 # -----------------------------------------------------------------------
 Write-Step "Blitztext wird von GitHub geladen ..."
 if (Test-Path "$InstallDir\.git") {
-    Write-Warn "Vorhandene Installation gefunden – wird auf neueste Version aktualisiert ..."
+    Write-Warn "Vorhandene Installation gefunden - wird auf neueste Version aktualisiert ..."
     Push-Location $InstallDir
     git pull origin main
     Pop-Location
@@ -106,10 +106,10 @@ try {
         $hasNvidia = $true
         Write-OK "NVIDIA-GPU gefunden: $($gpu.Name)"
     } else {
-        Write-OK "Keine NVIDIA-GPU gefunden – CPU-Modus wird verwendet"
+        Write-OK "Keine NVIDIA-GPU gefunden - CPU-Modus wird verwendet"
     }
 } catch {
-    Write-Warn "GPU-Erkennung fehlgeschlagen – installiere CPU-Version"
+    Write-Warn "GPU-Erkennung fehlgeschlagen - installiere CPU-Version"
 }
 
 if ($hasNvidia) {
@@ -142,7 +142,7 @@ $shortcut = $wsh.CreateShortcut($shortcutPath)
 $shortcut.TargetPath       = $venvPythonW
 $shortcut.Arguments        = "`"$InstallDir\main.py`""
 $shortcut.WorkingDirectory = $InstallDir
-$shortcut.Description      = "Blitztext – Sprache zu Text"
+$shortcut.Description      = "Blitztext - Sprache zu Text"
 $shortcut.Save()
 Write-OK "Verkuepfung 'Blitztext' auf dem Desktop erstellt"
 
