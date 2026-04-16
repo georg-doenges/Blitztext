@@ -21,3 +21,5 @@ if %ERRORLEVEL% neq 0 (
 )
 
 powershell -ExecutionPolicy Bypass -NoProfile -File "%TEMP%\blitztext_install.ps1"
+
+pause
