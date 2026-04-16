@@ -8,7 +8,7 @@ echo.
 echo  Ein Moment bitte ...
 echo.
 
-powershell -ExecutionPolicy Bypass -NoProfile -Command "irm 'https://raw.githubusercontent.com/georg-doenges/Blitztext/main/install.ps1' -OutFile (Join-Path $env:TEMP 'blitztext_install.ps1')"
+powershell -ExecutionPolicy Bypass -NoProfile -Command "Invoke-WebRequest 'https://raw.githubusercontent.com/georg-doenges/Blitztext/main/install.ps1' -OutFile (Join-Path $env:TEMP 'blitztext_install.ps1') -UseBasicParsing"
 
 if %ERRORLEVEL% neq 0 (
     echo.
