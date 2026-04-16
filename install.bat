@@ -14,11 +14,12 @@ if %ERRORLEVEL% neq 0 (
     echo.
     echo  [FEHLER] Download fehlgeschlagen.
     echo  Bitte pruefen, ob eine Internetverbindung besteht.
-    echo  Ausserdem pruefen: Ist das Repo auf GitHub oeffentlich?
     echo.
     pause
     exit /b 1
 )
+
+powershell -ExecutionPolicy Bypass -NoProfile -Command "$p = Join-Path $env:TEMP 'blitztext_install.ps1'; [IO.File]::WriteAllText($p, [IO.File]::ReadAllText($p), [Text.UTF8Encoding]::new($true))"
 
 powershell -ExecutionPolicy Bypass -NoProfile -File "%TEMP%\blitztext_install.ps1"
 
