@@ -67,19 +67,28 @@ class Transcriber:
         import whisper  # Import hier, damit startup schnell bleibt
 
         log = logging.getLogger(__name__)
+        log.info("Whisper-Loader gestartet (Modell: %s)", self._model_name)
 
-        if torch.cuda.is_available():
+        cuda_available = torch.cuda.is_available()
+        log.info("torch.cuda.is_available() = %s", cuda_available)
+        if cuda_available:
+            log.info("CUDA-Gerät: %s", torch.cuda.get_device_name(0))
+
+        if cuda_available:
             try:
                 self._device = "cuda"
+                log.info("Lade Whisper auf CUDA ...")
                 self._model = whisper.load_model(self._model_name, device="cuda")
                 log.info("Whisper geladen auf CUDA")
             except Exception as e:
                 log.warning("CUDA-Loading fehlgeschlagen (%s) – falle auf CPU zurück", e)
                 self._device = "cpu"
+                log.info("Lade Whisper auf CPU (Fallback) ...")
                 self._model = whisper.load_model(self._model_name, device="cpu")
                 log.info("Whisper geladen auf CPU (Fallback)")
         else:
             self._device = "cpu"
+            log.info("Lade Whisper auf CPU ...")
             self._model = whisper.load_model(self._model_name, device="cpu")
             log.info("Whisper geladen auf CPU")
 
