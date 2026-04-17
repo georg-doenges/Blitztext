@@ -83,6 +83,9 @@ class BlitztextApp:
             )
         )
 
+        # Whisper-Fehler-Callback (z. B. Timeout wegen inkompatiblem PyTorch)
+        self._transcriber.set_on_error(self._on_whisper_error)
+
         # Worker Thread
         self._worker_thread = threading.Thread(
             target=self._worker_loop,
@@ -203,6 +206,15 @@ class BlitztextApp:
     # ------------------------------------------------------------------
     # Einstellungen
     # ------------------------------------------------------------------
+
+    def _on_whisper_error(self, message: str) -> None:
+        log.error("Whisper-Fehler: %s", message)
+        import tkinter as tk
+        from tkinter import messagebox
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("Blitztext – Fehler beim Laden", message)
+        root.destroy()
 
     def _open_settings(self) -> None:
         from blitztext.settings_window import open_settings
