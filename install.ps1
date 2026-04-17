@@ -140,7 +140,19 @@ Write-Step "Weitere Pakete werden installiert ..."
 Write-OK "Alle Pakete installiert"
 
 # -----------------------------------------------------------------------
-# 6b. whisper_device in settings.json eintragen
+# 6b. CUDA_VISIBLE_DEVICES Umgebungsvariable setzen (wirkt auch auf alten Code)
+# -----------------------------------------------------------------------
+if (-not $useCuda) {
+    [Environment]::SetEnvironmentVariable("CUDA_VISIBLE_DEVICES", "-1", "User")
+    Write-OK "CUDA deaktiviert (CUDA_VISIBLE_DEVICES=-1)"
+} else {
+    # Sicherstellen dass eine alte Einschraenkung aufgehoben wird
+    [Environment]::SetEnvironmentVariable("CUDA_VISIBLE_DEVICES", $null, "User")
+    Write-OK "CUDA aktiv"
+}
+
+# -----------------------------------------------------------------------
+# 6c. whisper_device in settings.json eintragen
 # -----------------------------------------------------------------------
 $settingsDir  = "$env:APPDATA\Blitztext"
 $settingsFile = "$settingsDir\settings.json"
