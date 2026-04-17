@@ -26,6 +26,7 @@ class Settings:
     autostart: bool = False
     language: str = "de"          # Whisper-Sprachcode oder "" für auto-detect
     whisper_model: str = "small"
+    whisper_device: str = "auto"  # "auto" = CUDA wenn verfügbar, "cpu" = immer CPU
 
 
 def load() -> Settings:

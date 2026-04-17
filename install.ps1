@@ -112,10 +112,20 @@ try {
     Write-Warn "GPU-Erkennung fehlgeschlagen - installiere CPU-Version"
 }
 
+$useCuda = $false
 if ($hasNvidia) {
-    Write-Warn "Installiere PyTorch mit CUDA (ca. 2-4 GB Download, dauert einige Minuten) ..."
-    & $venvPip install torch --index-url https://download.pytorch.org/whl/cu118 --quiet
-    Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
+    Write-Host ""
+    $cudaChoice = Read-Host "  Soll die Nvidia-GPU fuer Whisper verwendet werden?`n  Nein empfohlen fuer aeltere Grafikkarten (j/n)"
+    if ($cudaChoice -eq "j" -or $cudaChoice -eq "J") {
+        $useCuda = $true
+        Write-Warn "Installiere PyTorch mit CUDA (ca. 2-4 GB Download, dauert einige Minuten) ..."
+        & $venvPip install torch --index-url https://download.pytorch.org/whl/cu118 --quiet
+        Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
+    } else {
+        Write-Warn "Installiere PyTorch CPU-Version ..."
+        & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --quiet
+        Write-OK "PyTorch (CPU) installiert"
+    }
 } else {
     Write-Warn "Installiere PyTorch CPU-Version ..."
     & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --quiet
@@ -128,6 +138,25 @@ if ($hasNvidia) {
 Write-Step "Weitere Pakete werden installiert ..."
 & $venvPip install -r "$InstallDir\requirements.txt" --quiet
 Write-OK "Alle Pakete installiert"
+
+# -----------------------------------------------------------------------
+# 6b. whisper_device in settings.json eintragen
+# -----------------------------------------------------------------------
+$settingsDir  = "$env:APPDATA\Blitztext"
+$settingsFile = "$settingsDir\settings.json"
+$whisperDevice = if ($useCuda) { "auto" } else { "cpu" }
+
+New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
+if (Test-Path $settingsFile) {
+    # Vorhandene settings.json einlesen und whisper_device setzen/aktualisieren
+    $json = Get-Content $settingsFile -Raw | ConvertFrom-Json
+    $json | Add-Member -NotePropertyName "whisper_device" -NotePropertyValue $whisperDevice -Force
+    $json | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+} else {
+    # Neue settings.json mit whisper_device anlegen
+    @{ whisper_device = $whisperDevice } | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+}
+Write-OK "Whisper-Geraet eingestellt: $whisperDevice"
 
 # -----------------------------------------------------------------------
 # 7. Desktop-Verkuepfung erstellen

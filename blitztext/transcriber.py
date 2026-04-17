@@ -13,8 +13,9 @@ MIN_DURATION_SECONDS = 0.3  # Kürzere Aufnahmen werden verworfen
 
 
 class Transcriber:
-    def __init__(self, model_name: str = "small") -> None:
+    def __init__(self, model_name: str = "small", whisper_device: str = "auto") -> None:
         self._model_name = model_name
+        self._whisper_device = whisper_device  # "auto" | "cpu" | "cuda"
         self._model = None
         self._device = "cpu"
         self._ready = threading.Event()
@@ -67,14 +68,23 @@ class Transcriber:
         import whisper  # Import hier, damit startup schnell bleibt
 
         log = logging.getLogger(__name__)
-        log.info("Whisper-Loader gestartet (Modell: %s)", self._model_name)
+        log.info("Whisper-Loader gestartet (Modell: %s, device-setting: %s)",
+                 self._model_name, self._whisper_device)
 
-        cuda_available = torch.cuda.is_available()
-        log.info("torch.cuda.is_available() = %s", cuda_available)
-        if cuda_available:
-            log.info("CUDA-Gerät: %s", torch.cuda.get_device_name(0))
+        # Gerät bestimmen
+        if self._whisper_device == "cpu":
+            use_cuda = False
+            log.info("CPU-Modus erzwungen (whisper_device=cpu)")
+        elif self._whisper_device == "cuda":
+            use_cuda = True
+            log.info("CUDA-Modus erzwungen (whisper_device=cuda)")
+        else:
+            use_cuda = torch.cuda.is_available()
+            log.info("Auto-Erkennung: torch.cuda.is_available() = %s", use_cuda)
+            if use_cuda:
+                log.info("CUDA-Gerät: %s", torch.cuda.get_device_name(0))
 
-        if cuda_available:
+        if use_cuda:
             try:
                 self._device = "cuda"
                 log.info("Lade Whisper auf CUDA ...")

@@ -52,7 +52,10 @@ class BlitztextApp:
 
         # Komponenten
         self._recorder = AudioRecorder()
-        self._transcriber = Transcriber(model_name=self._settings.whisper_model)
+        self._transcriber = Transcriber(
+            model_name=self._settings.whisper_model,
+            whisper_device=self._settings.whisper_device,
+        )
         self._claude = ClaudeClient(api_key=self._settings.claude_api_key)
 
         self._worker_queue: queue.Queue = queue.Queue()
