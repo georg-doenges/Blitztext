@@ -133,16 +133,16 @@ if ($hasNvidia) {
     if ($cudaChoice -eq "j" -or $cudaChoice -eq "J") {
         $useCuda = $true
         Write-Warn "Installiere PyTorch mit CUDA (ca. 2-4 GB Download, dauert einige Minuten) ..."
-        & $venvPip install torch --index-url https://download.pytorch.org/whl/cu118 --quiet
+        & $venvPip install torch --index-url https://download.pytorch.org/whl/cu118 --timeout 120 --quiet
         Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
     } else {
         Write-Warn "Installiere PyTorch CPU-Version ..."
-        & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --quiet
+        & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --timeout 120 --quiet
         Write-OK "PyTorch (CPU) installiert"
     }
 } else {
     Write-Warn "Installiere PyTorch CPU-Version ..."
-    & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --quiet
+    & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --timeout 120 --quiet
     Write-OK "PyTorch (CPU) installiert"
 }
 
@@ -150,7 +150,7 @@ if ($hasNvidia) {
 # 6. Weitere Abhaengigkeiten installieren
 # -----------------------------------------------------------------------
 Write-Step "Weitere Pakete werden installiert ..."
-& $venvPip install -r "$InstallDir\requirements.txt" --quiet
+& $venvPip install -r "$InstallDir\requirements.txt" --timeout 120 --quiet
 Write-OK "Alle Pakete installiert"
 
 # -----------------------------------------------------------------------
