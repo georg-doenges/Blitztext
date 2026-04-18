@@ -150,21 +150,40 @@ class SettingsWindow(tk.Tk):
             row=4, column=2, sticky="w"
         )
 
+        # --- Whisper-Gerät ---
+        ttk.Label(self, text="Whisper-Gerät:").grid(
+            row=5, column=0, sticky="w", **pad
+        )
+        self._whisper_device_var = tk.StringVar(
+            master=self, value=self._settings.whisper_device
+        )
+        device_cb = ttk.Combobox(
+            self,
+            textvariable=self._whisper_device_var,
+            values=["auto", "cpu", "cuda"],
+            width=8,
+            state="readonly",
+        )
+        device_cb.grid(row=5, column=1, sticky="w", **pad)
+        ttk.Label(self, text="(Neustart erforderlich)", foreground="gray").grid(
+            row=5, column=2, sticky="w"
+        )
+
         # --- Autostart ---
         from blitztext import autostart
         self._autostart_var = tk.BooleanVar(master=self, value=autostart.is_enabled())
         ttk.Checkbutton(
             self, text="Mit Windows starten", variable=self._autostart_var
-        ).grid(row=5, column=0, columnspan=3, sticky="w", **pad)
+        ).grid(row=6, column=0, columnspan=3, sticky="w", **pad)
 
         # --- Log anzeigen ---
         ttk.Button(
             self, text="Log anzeigen", command=self._open_log
-        ).grid(row=6, column=0, columnspan=3, sticky="w", **pad)
+        ).grid(row=7, column=0, columnspan=3, sticky="w", **pad)
 
         # --- Buttons ---
         btn_frame = ttk.Frame(self)
-        btn_frame.grid(row=7, column=0, columnspan=3, pady=12)
+        btn_frame.grid(row=8, column=0, columnspan=3, pady=12)
         ttk.Button(btn_frame, text="Speichern", command=self._save).pack(
             side="left", padx=8
         )
@@ -247,6 +266,7 @@ class SettingsWindow(tk.Tk):
         self._settings.mode = self._mode_var.get()
         self._settings.claude_api_key = self._api_key_var.get()
         self._settings.language = self._lang_var.get()
+        self._settings.whisper_device = self._whisper_device_var.get()
         self._settings.autostart = self._autostart_var.get()
 
         settings_mod.save(self._settings)
