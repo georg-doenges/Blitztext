@@ -126,6 +126,31 @@ class Transcriber:
         except Exception:
             return None
 
+    @staticmethod
+    def _fix_stdio() -> None:
+        # pythonw.exe hat keine Konsole: sys.stdout/stderr sind None.
+        # whispers tqdm-Fortschrittsanzeige ruft stderr.write() auf → AttributeError.
+        # Wir leiten beide Streams auf einen verworfenen Puffer um.
+        import io
+        import sys
+        _sink = io.StringIO()
+        if sys.stdout is None:
+            sys.stdout = _sink
+        if sys.stderr is None:
+            sys.stderr = _sink
+
+    def _delete_cache_if_corrupt(self, cache_path: Optional[str]) -> None:
+        if cache_path and os.path.isfile(cache_path) and os.path.getsize(cache_path) < 1024:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Defekte Cache-Datei (%d Bytes) – wird gelöscht: %s",
+                os.path.getsize(cache_path), cache_path,
+            )
+            try:
+                os.remove(cache_path)
+            except OSError as e:
+                logging.getLogger(__name__).warning("Löschen fehlgeschlagen: %s", e)
+
     def _load_model(self) -> None:
         import logging
         import torch
@@ -135,15 +160,12 @@ class Transcriber:
         log.info("Whisper-Loader gestartet (Modell: %s, device-setting: %s)",
                  self._model_name, self._whisper_device)
 
+        # sys.stderr/stdout absichern bevor whisper/tqdm sie verwendet
+        self._fix_stdio()
+
         # Defekte (leere) Cache-Datei löschen, damit whisper sauber neu lädt
         cache_path = self._model_cache_path(self._model_name)
-        if cache_path and os.path.isfile(cache_path) and os.path.getsize(cache_path) < 1024:
-            log.warning("Defekte Cache-Datei gefunden (%s, %d Bytes) – wird gelöscht",
-                        cache_path, os.path.getsize(cache_path))
-            try:
-                os.remove(cache_path)
-            except OSError as e:
-                log.warning("Konnte defekte Cache-Datei nicht löschen: %s", e)
+        self._delete_cache_if_corrupt(cache_path)
 
         # Prüfen ob Modell-Download nötig ist
         needs_download = cache_path and not os.path.isfile(cache_path)
@@ -176,6 +198,8 @@ class Transcriber:
                 log.info("Whisper geladen auf CUDA")
             except Exception as e:
                 log.warning("CUDA-Loading fehlgeschlagen (%s) – falle auf CPU zurück", e)
+                # Nach fehlgeschlagenem CUDA-Versuch: korrupte Cache-Datei bereinigen
+                self._delete_cache_if_corrupt(cache_path)
                 self._device = "cpu"
                 log.info("Lade Whisper auf CPU (Fallback) ...")
                 self._model = whisper.load_model(self._model_name, device="cpu")
