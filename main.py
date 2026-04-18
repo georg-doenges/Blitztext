@@ -76,15 +76,14 @@ class BlitztextApp:
             on_activate=self._on_hotkey,
         )
 
-        # Whisper-Bereit-Callback
+        # Whisper-Callbacks
         self._transcriber.set_on_ready(
-            lambda: self._tray.notify(
-                "Blitztext", "Whisper bereit – Hotkey aktiv."
-            )
+            lambda: self._tray.notify("Blitztext", "Whisper bereit – Hotkey aktiv.")
         )
-
-        # Whisper-Fehler-Callback (z. B. Timeout wegen inkompatiblem PyTorch)
         self._transcriber.set_on_error(self._on_whisper_error)
+        self._transcriber.set_on_status(
+            lambda title, msg: self._tray.notify(title, msg)
+        )
 
         # Worker Thread
         self._worker_thread = threading.Thread(

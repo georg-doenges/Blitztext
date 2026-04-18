@@ -89,7 +89,21 @@ if (-not (Test-Path $venvDir)) {
     & $python -m venv $venvDir
     Write-OK "Umgebung erstellt"
 } else {
-    Write-OK "Umgebung bereits vorhanden, wird verwendet"
+    Write-OK "Umgebung gefunden - wird geprueft ..."
+}
+
+# Venv-Integritaet pruefen: python.exe und pip.exe muessen vorhanden sein
+if (-not (Test-Path $venvPython) -or -not (Test-Path $venvPip)) {
+    Write-Warn "Venv ist unvollstaendig (fehlende python.exe oder pip.exe) – wird neu erstellt ..."
+    Remove-Item -Recurse -Force $venvDir -ErrorAction SilentlyContinue
+    & $python -m venv $venvDir
+    if (-not (Test-Path $venvPython)) {
+        Write-Fail "Virtuelle Umgebung konnte nicht erstellt werden."
+        Write-Warn "Stellen Sie sicher, dass Python korrekt installiert ist."
+        Read-Host "`nDruecke Enter zum Beenden"
+        exit 1
+    }
+    Write-OK "Umgebung neu erstellt"
 }
 
 # pip aktualisieren

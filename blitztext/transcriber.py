@@ -4,24 +4,28 @@ Das Modell wird in einem Background-Thread geladen, damit der Tray sofort ersche
 """
 from __future__ import annotations
 
+import os
 import threading
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 
 MIN_DURATION_SECONDS = 0.3  # Kürzere Aufnahmen werden verworfen
 
-_TIMEOUT_SECONDS = 90  # Watchdog: so lange darf das Laden maximal dauern
+# Beim Erststart muss das Modell (~460 MB) heruntergeladen werden.
+# 30 Minuten decken auch sehr langsame Verbindungen ab.
+_TIMEOUT_SECONDS = 1800
 
 _TIMEOUT_MESSAGE = (
     "Whisper konnte nicht geladen werden.\n\n"
-    "Mögliche Ursache: Die installierte PyTorch-Version ist nicht kompatibel "
-    "(z. B. CUDA-Build auf älterer Grafikkarte).\n\n"
-    "Lösung – diesen Befehl im Blitztext-Ordner ausführen:\n\n"
-    "  .venv\\Scripts\\pip install torch\n"
-    "      --index-url https://download.pytorch.org/whl/cpu\n"
-    "      --force-reinstall\n\n"
-    "Danach Blitztext neu starten."
+    "Mögliche Ursachen:\n\n"
+    "1. Kein Internetzugang beim Erststart\n"
+    "   Das Sprachmodell (~460 MB) muss beim ersten Start heruntergeladen werden.\n"
+    "   → Internetzugang prüfen und Blitztext neu starten.\n\n"
+    "2. Antivirus blockiert den Download\n"
+    "   → Ausnahme für Blitztext im Antivirusprogramm einrichten.\n\n"
+    "3. PyTorch-Version nicht kompatibel\n"
+    "   → Blitztext neu installieren."
 )
 
 
@@ -34,6 +38,8 @@ class Transcriber:
         self._ready = threading.Event()
         self._on_ready_callback: Optional[Callable[[], None]] = None
         self._on_error_callback: Optional[Callable[[str], None]] = None
+        self._on_status_callback: Optional[Callable[[str, str], None]] = None
+        self._current_status: Optional[Tuple[str, str]] = None
 
         # Watchdog: löst aus, wenn das Laden zu lange dauert
         self._watchdog = threading.Timer(_TIMEOUT_SECONDS, self._loading_timeout)
@@ -54,6 +60,17 @@ class Transcriber:
     def set_on_error(self, callback: Callable[[str], None]) -> None:
         """Wird aufgerufen, wenn das Laden fehlschlägt oder zu lange dauert."""
         self._on_error_callback = callback
+
+    def set_on_status(self, callback: Callable[[str, str], None]) -> None:
+        """Wird mit (title, message) aufgerufen, wenn sich der Ladestatus ändert."""
+        self._on_status_callback = callback
+        if self._current_status:
+            callback(*self._current_status)
+
+    def _notify_status(self, title: str, message: str) -> None:
+        self._current_status = (title, message)
+        if self._on_status_callback:
+            self._on_status_callback(title, message)
 
     @property
     def is_ready(self) -> bool:
@@ -91,11 +108,23 @@ class Transcriber:
             return
         import logging
         logging.getLogger(__name__).error(
-            "Whisper-Loader Timeout nach %d Sekunden – wahrscheinlich hängt import torch",
-            _TIMEOUT_SECONDS,
+            "Whisper-Loader Timeout nach %d Sekunden", _TIMEOUT_SECONDS
         )
         if self._on_error_callback:
             self._on_error_callback(_TIMEOUT_MESSAGE)
+
+    @staticmethod
+    def _model_cache_path(model_name: str) -> Optional[str]:
+        """Gibt den Pfad zur gecachten Modelldatei zurück, oder None falls unbekannt."""
+        try:
+            import whisper as _w
+            url = _w._MODELS.get(model_name, "")
+            if not url:
+                return None
+            download_root = os.path.join(os.path.expanduser("~"), ".cache", "whisper")
+            return os.path.join(download_root, os.path.basename(url))
+        except Exception:
+            return None
 
     def _load_model(self) -> None:
         import logging
@@ -105,6 +134,26 @@ class Transcriber:
         log = logging.getLogger(__name__)
         log.info("Whisper-Loader gestartet (Modell: %s, device-setting: %s)",
                  self._model_name, self._whisper_device)
+
+        # Defekte (leere) Cache-Datei löschen, damit whisper sauber neu lädt
+        cache_path = self._model_cache_path(self._model_name)
+        if cache_path and os.path.isfile(cache_path) and os.path.getsize(cache_path) < 1024:
+            log.warning("Defekte Cache-Datei gefunden (%s, %d Bytes) – wird gelöscht",
+                        cache_path, os.path.getsize(cache_path))
+            try:
+                os.remove(cache_path)
+            except OSError as e:
+                log.warning("Konnte defekte Cache-Datei nicht löschen: %s", e)
+
+        # Prüfen ob Modell-Download nötig ist
+        needs_download = cache_path and not os.path.isfile(cache_path)
+        if needs_download:
+            log.info("Modell nicht im Cache – Download erforderlich (~460 MB)")
+            self._notify_status(
+                "Blitztext",
+                "Whisper-Modell wird heruntergeladen (~460 MB).\n"
+                "Das kann mehrere Minuten dauern …"
+            )
 
         # Gerät bestimmen
         if self._whisper_device == "cpu":
