@@ -89,6 +89,7 @@ Rechtsklick auf das Tray-Symbol → **„Einstellungen …"**
 | Hotkey | Tastenkürzel ändern (Standard: Strg+Umschalt+Leertaste) |
 | Sprache | Sprache der Aufnahme (Standard: Deutsch) |
 | Whisper-Modell | Genauigkeit vs. Geschwindigkeit (Standard: small) |
+| Whisper-Gerät | GPU/CPU-Auswahl: auto (empfohlen), cpu, cuda |
 | Claude API Key | Nötig für die Poliert-Modi (Konservativ und Ausgefeilt) |
 | Autostart | Beim Windows-Start automatisch starten |
 
@@ -113,7 +114,7 @@ Klicke auf den kleinen Pfeil `^` neben der Uhr – das Symbol könnte dort verst
 Klicke einmal in das Textfeld, bevor du den Hotkey drückst, damit das richtige Fenster aktiv ist.
 
 **Blitztext reagiert nicht sofort nach dem Start.**
-Das Spracherkennungs-Modell wird beim ersten Start geladen – das dauert einen Moment. Sobald es bereit ist, erscheint eine kleine Benachrichtigung: *„Whisper bereit – Hotkey aktiv."*
+Das Spracherkennungs-Modell wird beim ersten Start heruntergeladen (~460 MB) und geladen – das dauert beim allerersten Mal einige Minuten. Sobald es bereit ist, erscheint eine kleine Benachrichtigung: *„Whisper bereit – Hotkey aktiv."*
 
 **In der Eingabeaufforderung (cmd) funktioniert das Einfügen nicht.**
 Das ist eine bekannte Einschränkung. In normalen Programmen wie Word, Outlook oder dem Browser funktioniert alles problemlos.
@@ -122,6 +123,6 @@ Das ist eine bekannte Einschränkung. In normalen Programmen wie Word, Outlook o
 
 ## Deinstallation
 
-1. Den Ordner `Blitztext` im Benutzerverzeichnis löschen (`C:\Users\DeinName\Blitztext`).
+1. Den Ordner `Blitztext` löschen (`C:\Users\DeinName\AppData\Local\Programs\Blitztext`).
 2. Die Verknüpfung auf dem Desktop löschen.
 3. Falls Autostart eingerichtet: `shell:startup` im Explorer öffnen und die Blitztext-Verknüpfung dort löschen.
