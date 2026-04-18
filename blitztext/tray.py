@@ -85,6 +85,49 @@ _STATE_LABELS = {
 }
 
 
+def _show_about() -> None:
+    import threading
+    threading.Thread(target=_about_window, daemon=True, name="AboutDialog").start()
+
+
+def _about_window() -> None:
+    import tkinter as tk
+    from tkinter import ttk
+    import webbrowser
+    from blitztext.version import __version__
+
+    root = tk.Tk()
+    root.title("Über Blitztext")
+    root.resizable(False, False)
+
+    pad = {"padx": 20, "pady": 6}
+    ttk.Label(root, text="Blitztext", font=("Segoe UI", 16, "bold")).pack(**pad)
+    ttk.Label(root, text=f"Version {__version__}").pack(pady=(0, 4))
+    ttk.Separator(root, orient="horizontal").pack(fill="x", padx=20, pady=4)
+    ttk.Label(root, text="Sprache-zu-Text für jede Windows-Anwendung").pack(**pad)
+    ttk.Label(root, text="© 2026 Georg Dönges").pack(pady=(0, 4))
+
+    link = ttk.Label(
+        root,
+        text="github.com/georg-doenges/Blitztext",
+        foreground="#2563eb",
+        cursor="hand2",
+    )
+    link.pack(pady=(0, 8))
+    link.bind("<Button-1>", lambda _: webbrowser.open(
+        "https://github.com/georg-doenges/Blitztext"
+    ))
+
+    ttk.Button(root, text="Schließen", command=root.destroy).pack(pady=(4, 16))
+
+    # Zentrieren
+    root.update_idletasks()
+    sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+    w, h = root.winfo_width(), root.winfo_height()
+    root.geometry(f"+{(sw - w) // 2}+{(sh - h) // 2}")
+    root.mainloop()
+
+
 class TrayApp:
     def __init__(
         self,
@@ -157,6 +200,7 @@ class TrayApp:
             pystray.MenuItem(toggle_label, self._handle_toggle_mode),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Einstellungen …", self._handle_open_settings),
+            pystray.MenuItem("Über Blitztext …", self._handle_about),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Beenden", self._handle_quit),
         )
@@ -169,6 +213,9 @@ class TrayApp:
 
     def _handle_toggle_mode(self, icon, item) -> None:
         self._on_toggle_mode()
+
+    def _handle_about(self, icon, item) -> None:
+        _show_about()
 
     def _handle_quit(self, icon, item) -> None:
         self._on_quit()

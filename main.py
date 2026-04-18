@@ -42,6 +42,7 @@ from blitztext.inserter import get_foreground_hwnd, insert
 from blitztext.recorder import AudioRecorder
 from blitztext.transcriber import Transcriber
 from blitztext.tray import IDLE, PROCESSING, RECORDING, TrayApp
+from blitztext.updater import check_for_updates
 
 MIN_RECORDING_DURATION = 0.3  # Sekunden
 
@@ -103,6 +104,12 @@ class BlitztextApp:
 
         if not self._transcriber.is_ready:
             self._tray.notify("Blitztext", "Whisper-Modell wird geladen …")
+
+        install_dir = os.path.dirname(os.path.abspath(__file__))
+        check_for_updates(
+            install_dir,
+            on_update_found=lambda msg: self._tray.notify("Blitztext – Update", msg),
+        )
 
         # Blockiert bis zum Beenden
         self._tray.run()
