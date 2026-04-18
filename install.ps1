@@ -3,7 +3,7 @@
 # Ausfuehren mit: Rechtsklick -> "Mit PowerShell ausfuehren"
 
 param(
-    [string]$InstallDir = "$env:USERPROFILE\Blitztext"
+    [string]$InstallDir = "$env:LOCALAPPDATA\Programs\Blitztext"
 )
 
 $ErrorActionPreference = "Stop"
