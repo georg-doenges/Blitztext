@@ -95,7 +95,20 @@ class Transcriber:
         if language:
             kwargs["language"] = language
 
-        result = self._model.transcribe(audio, **kwargs)
+        try:
+            result = self._model.transcribe(audio, **kwargs)
+        except RuntimeError as exc:
+            if "CUDA" in str(exc) and self._device == "cuda":
+                import logging
+                logging.getLogger(__name__).warning(
+                    "CUDA-Fehler beim Transkribieren – falle auf CPU zurück: %s", exc
+                )
+                self._model = self._model.to("cpu")
+                self._device = "cpu"
+                kwargs["fp16"] = False
+                result = self._model.transcribe(audio, **kwargs)
+            else:
+                raise
         return result["text"].strip()
 
     # ------------------------------------------------------------------
