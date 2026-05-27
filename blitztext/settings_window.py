@@ -22,6 +22,7 @@ _lock = threading.Lock()
 def open_settings(
     settings: "Settings",
     on_save: Callable[["Settings"], None],
+    on_transcribe_file: Optional[Callable[[str], None]] = None,
 ) -> None:
     """Öffnet das Settings-Fenster in einem eigenen Thread (Singleton)."""
     global _window_thread, _window_instance
@@ -35,17 +36,21 @@ def open_settings(
 
         _window_thread = threading.Thread(
             target=_run_window,
-            args=(settings, on_save),
+            args=(settings, on_save, on_transcribe_file),
             daemon=True,
             name="SettingsWindow",
         )
         _window_thread.start()
 
 
-def _run_window(settings: "Settings", on_save: Callable[["Settings"], None]) -> None:
+def _run_window(
+    settings: "Settings",
+    on_save: Callable[["Settings"], None],
+    on_transcribe_file: Optional[Callable[[str], None]],
+) -> None:
     global _window_instance
     import gc
-    win = SettingsWindow(settings, on_save)
+    win = SettingsWindow(settings, on_save, on_transcribe_file)
     _window_instance = win
     try:
         win.mainloop()
@@ -62,10 +67,12 @@ class SettingsWindow(tk.Tk):
         self,
         settings: "Settings",
         on_save: Callable[["Settings"], None],
+        on_transcribe_file: Optional[Callable[[str], None]] = None,
     ) -> None:
         super().__init__()
         self._settings = settings
         self._on_save = on_save
+        self._on_transcribe_file = on_transcribe_file
         self._capturing_hotkey = False
 
         self.title("Blitztext – Einstellungen")
@@ -176,10 +183,17 @@ class SettingsWindow(tk.Tk):
             self, text="Mit Windows starten", variable=self._autostart_var
         ).grid(row=6, column=0, columnspan=3, sticky="w", **pad)
 
-        # --- Log anzeigen ---
+        # --- Hilfsfunktionen ---
+        utils_frame = ttk.Frame(self)
+        utils_frame.grid(row=7, column=0, columnspan=3, sticky="w", **pad)
+        ttk.Button(utils_frame, text="Log anzeigen", command=self._open_log).pack(
+            side="left", padx=(0, 8)
+        )
         ttk.Button(
-            self, text="Log anzeigen", command=self._open_log
-        ).grid(row=7, column=0, columnspan=3, sticky="w", **pad)
+            utils_frame,
+            text="Audio-Datei transkribieren …",
+            command=self._pick_and_transcribe_file,
+        ).pack(side="left")
 
         # --- Buttons ---
         btn_frame = ttk.Frame(self)
@@ -254,6 +268,18 @@ class SettingsWindow(tk.Tk):
             os.environ.get("APPDATA", os.path.expanduser("~")), "Blitztext", "blitztext.log"
         )
         os.startfile(log_path)
+
+    def _pick_and_transcribe_file(self) -> None:
+        from tkinter import filedialog
+        file_path = filedialog.askopenfilename(
+            title="Audio-Datei auswählen",
+            filetypes=[
+                ("Audio-Dateien", "*.mp3 *.m4a *.wav *.ogg *.flac *.aac *.mp4 *.webm"),
+                ("Alle Dateien", "*.*"),
+            ],
+        )
+        if file_path and self._on_transcribe_file:
+            self._on_transcribe_file(file_path)
 
     def _toggle_key_visibility(self) -> None:
         self._show_key = not self._show_key

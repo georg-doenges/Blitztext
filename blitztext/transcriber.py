@@ -76,6 +76,27 @@ class Transcriber:
     def is_ready(self) -> bool:
         return self._ready.is_set()
 
+    def transcribe_file(self, file_path: str, language: str = "de") -> str:
+        """
+        Lädt eine Audio-Datei (mp3, m4a, wav, ogg, flac …) und transkribiert sie.
+        Blockiert, bis das Modell geladen ist.
+        Benötigt ffmpeg im System-PATH.
+        """
+        self._ready.wait()
+
+        import whisper as _whisper
+        audio = _whisper.load_audio(file_path)
+
+        kwargs: dict = {
+            "task": "transcribe",
+            "fp16": self._device == "cuda",
+        }
+        if language:
+            kwargs["language"] = language
+
+        result = self._model.transcribe(audio, **kwargs)
+        return result["text"].strip()
+
     def transcribe(self, audio: np.ndarray, language: str = "de") -> str:
         """
         Transkribiert ein float32-NumPy-Array (16 kHz, Mono).

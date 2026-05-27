@@ -222,12 +222,57 @@ class BlitztextApp:
         messagebox.showerror("Blitztext – Fehler beim Laden", message)
         root.destroy()
 
+    def _on_transcribe_file(self, file_path: str) -> None:
+        """Startet die Datei-Transkription in einem eigenen Thread."""
+        t = threading.Thread(
+            target=self._transcribe_file_worker,
+            args=(file_path,),
+            daemon=True,
+            name="FileTranscriber",
+        )
+        t.start()
+
+    def _transcribe_file_worker(self, file_path: str) -> None:
+        import pyperclip
+        self._tray.set_state(PROCESSING)
+        try:
+            text = self._transcriber.transcribe_file(
+                file_path, language=self._settings.language
+            )
+            log.info("Datei-Transkription: %r", text)
+
+            if not text:
+                self._tray.notify("Blitztext", "Keine Sprache erkannt.")
+                return
+
+            if self._settings.mode in ("poliert_konservativ", "poliert_ausgefeilt"):
+                try:
+                    text = self._claude.reformulate(text, mode=self._settings.mode)
+                    log.info("Claude-Ergebnis (Datei): %r", text)
+                except MissingAPIKeyError:
+                    self._tray.notify(
+                        "Blitztext", "Kein Claude API Key – Text wird unverändert kopiert."
+                    )
+                except Exception as e:
+                    log.exception("Claude-Fehler bei Datei-Transkription")
+                    self._tray.notify("Blitztext", f"Claude-Fehler: {e}")
+
+            pyperclip.copy(text)
+            self._tray.notify("Blitztext", "Text in Zwischenablage – mit Ctrl+V einfügen.")
+
+        except Exception as e:
+            log.exception("Fehler bei Datei-Transkription")
+            self._tray.notify("Blitztext", f"Fehler: {e}")
+        finally:
+            self._tray.set_state(IDLE)
+
     def _open_settings(self) -> None:
         from blitztext.settings_window import open_settings
 
         open_settings(
             settings=self._settings,
             on_save=self._apply_settings,
+            on_transcribe_file=self._on_transcribe_file,
         )
 
     def _apply_settings(self, new_settings) -> None:

@@ -38,6 +38,11 @@ def set_recording(active: bool) -> None:
     _q.put(("rec", active))
 
 
+def set_processing(active: bool) -> None:
+    """Processing-Badge ein- oder ausblenden."""
+    _q.put(("processing", active))
+
+
 def notify(title: str, message: str) -> None:
     """Benachrichtigung anzeigen (schließt sich nach 4 s automatisch)."""
     _q.put(("notify", title, message))
@@ -79,6 +84,35 @@ def _run() -> None:
         rec.geometry(f"+{sw - w - _MARGIN}+{sh - h - _TASKBAR_H - _MARGIN}")
         rec.deiconify()
         rec.lift()
+
+    # --- Processing-Badge ---
+    proc = tk.Toplevel(root)
+    proc.withdraw()
+    proc.overrideredirect(True)
+    proc.attributes("-topmost", True)
+    proc.attributes("-alpha", 0.88)
+    proc.configure(bg="#2563eb")
+    try:
+        proc.wm_attributes("-toolwindow", True)
+    except tk.TclError:
+        pass
+
+    tk.Label(
+        proc, text="  ● Processing  ",
+        bg="#2563eb", fg="white",
+        font=("Segoe UI", 10, "bold"),
+        padx=4, pady=4,
+    ).pack()
+
+    def _show_proc() -> None:
+        proc.update_idletasks()
+        sw = proc.winfo_screenwidth()
+        sh = proc.winfo_screenheight()
+        w  = proc.winfo_reqwidth()
+        h  = proc.winfo_reqheight()
+        proc.geometry(f"+{sw - w - _MARGIN}+{sh - h - _TASKBAR_H - _MARGIN}")
+        proc.deiconify()
+        proc.lift()
 
     # --- Benachrichtigungs-Popup ---
     def _show_notification(title: str, message: str) -> None:
@@ -132,6 +166,11 @@ def _run() -> None:
                     _show_rec()
                 else:
                     rec.withdraw()
+            elif kind == "processing":
+                if msg[1]:
+                    _show_proc()
+                else:
+                    proc.withdraw()
             elif kind == "notify":
                 _show_notification(msg[1], msg[2])
 

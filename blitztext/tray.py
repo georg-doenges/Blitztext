@@ -164,6 +164,7 @@ class TrayApp:
         self._icon.title = f"Blitztext – {_STATE_LABELS[state]}"
         self._rebuild_menu()
         overlay.set_recording(state == RECORDING)
+        overlay.set_processing(state == PROCESSING)
 
     def notify(self, title: str, message: str) -> None:
         """Zeigt eine Auto-Close-Benachrichtigung (schließt sich nach 4 s)."""
