@@ -16,11 +16,13 @@ Python und Git werden beim ersten Start automatisch erkannt. Falls sie noch nich
 
 ## Installation
 
-1. Lade die Datei **`install.bat`** herunter – du bekommst sie von der Person, die dir Blitztext empfohlen hat, oder direkt von [github.com/georg-doenges/Blitztext](https://github.com/georg-doenges/Blitztext).
-2. **Doppelklick** auf `install.bat`.
-3. Ein schwarzes Fenster öffnet sich kurz, dann startet das Installationsprogramm.
-4. Folge den Anweisungen auf dem Bildschirm. Die Installation dauert ein paar Minuten.
-5. Am Ende kannst du wählen, ob Blitztext automatisch beim Start von Windows geöffnet werden soll.
+Öffne **PowerShell** (Windows-Taste → „PowerShell" eingeben → Enter) und führe diesen Befehl aus:
+
+```powershell
+irm https://raw.githubusercontent.com/georg-doenges/Blitztext/main/install.ps1 | iex
+```
+
+Das Installationsprogramm lädt alles Nötige herunter und richtet Blitztext ein. Die Installation dauert ein paar Minuten (je nach Internetverbindung und Grafikkarte). Am Ende kannst du wählen, ob Blitztext automatisch beim Windows-Start geöffnet werden soll.
 
 Nach der Installation liegt eine Verknüpfung **„Blitztext"** auf deinem Desktop.
 
@@ -121,8 +123,26 @@ Das ist eine bekannte Einschränkung. In normalen Programmen wie Word, Outlook o
 
 ---
 
-## Deinstallation
+## Deinstallation und Neuinstallation
 
-1. Den Ordner `Blitztext` löschen (`C:\Users\DeinName\AppData\Local\Programs\Blitztext`).
-2. Die Verknüpfung auf dem Desktop löschen.
-3. Falls Autostart eingerichtet: `shell:startup` im Explorer öffnen und die Blitztext-Verknüpfung dort löschen.
+**Wichtig:** Blitztext zuerst beenden – Rechtsklick auf das Tray-Symbol → **Beenden**.
+
+Dann in PowerShell (die folgenden Befehle einzeln eingeben und ausführen):
+
+```powershell
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\Programs\Blitztext"
+Remove-Item -Force "$env:USERPROFILE\Desktop\Blitztext.lnk"
+Remove-Item -Force "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\Blitztext.lnk"
+```
+
+Die Einstellungen (API-Key, Modell-Auswahl usw.) bleiben erhalten. Falls du sie ebenfalls löschen möchtest:
+
+```powershell
+Remove-Item -Recurse -Force "$env:APPDATA\Blitztext"
+```
+
+Danach neu installieren:
+
+```powershell
+irm https://raw.githubusercontent.com/georg-doenges/Blitztext/main/install.ps1 | iex
+```
