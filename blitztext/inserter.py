@@ -11,15 +11,49 @@ wird übergeben und vor dem Einfügen wiederhergestellt.
 from __future__ import annotations
 
 import ctypes
+import ctypes.wintypes as _wt
 import time
 
 import pyperclip
-from pynput.keyboard import Controller, Key
-
-_keyboard_ctrl = Controller()
 
 # Etwas warten, damit das Zielfenster den Fokus vollständig zurückbekommt
 _FOCUS_DELAY = 0.12  # Sekunden
+
+# ------------------------------------------------------------------
+# Ctrl+V via SendInput (nur virtuelle Keys, kein Unicode-Char-Event)
+# ------------------------------------------------------------------
+_KEYEVENTF_KEYUP = 0x0002
+_INPUT_KEYBOARD  = 1
+_VK_CONTROL      = 0x11
+_VK_V            = 0x56
+
+
+class _KEYBDINPUT(ctypes.Structure):
+    _fields_ = [
+        ("wVk",         _wt.WORD),
+        ("wScan",       _wt.WORD),
+        ("dwFlags",     _wt.DWORD),
+        ("time",        _wt.DWORD),
+        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+    ]
+
+
+class _INPUT(ctypes.Structure):
+    class _U(ctypes.Union):
+        _fields_ = [("ki", _KEYBDINPUT)]
+    _anonymous_ = ("_u",)
+    _fields_     = [("type", _wt.DWORD), ("_u", _U)]
+
+
+def _send_ctrl_v() -> None:
+    """Sendet Ctrl+V via SendInput – keine Unicode-Char-Nebeneffekte."""
+    inputs = (_INPUT * 4)(
+        _INPUT(type=_INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=_VK_CONTROL)),
+        _INPUT(type=_INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=_VK_V)),
+        _INPUT(type=_INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=_VK_V,       dwFlags=_KEYEVENTF_KEYUP)),
+        _INPUT(type=_INPUT_KEYBOARD, ki=_KEYBDINPUT(wVk=_VK_CONTROL, dwFlags=_KEYEVENTF_KEYUP)),
+    )
+    ctypes.windll.user32.SendInput(4, inputs, ctypes.sizeof(_INPUT))
 
 
 def get_foreground_hwnd() -> int:
@@ -40,8 +74,7 @@ def insert(text: str, hwnd: int = 0, delete_before: int = 0) -> None:
 
     :param text: Der einzufügende Text.
     :param hwnd: HWND des Zielfensters (0 = kein expliziter Focus-Restore).
-    :param delete_before: Anzahl Backspaces, die vor dem Einfügen gesendet werden
-                          (zum Entfernen von Leerzeichen, die durch den Hotkey eingetippt wurden).
+    :param delete_before: Anzahl Backspaces, die vor dem Einfügen gesendet werden.
     """
     if not text:
         return
@@ -49,15 +82,9 @@ def insert(text: str, hwnd: int = 0, delete_before: int = 0) -> None:
     # Fokus auf Ursprungsfenster zurück
     restore_focus(hwnd)
 
-    # Vom Hotkey durchgerutschte Leerzeichen entfernen
-    for _ in range(delete_before):
-        _keyboard_ctrl.press(Key.backspace)
-        _keyboard_ctrl.release(Key.backspace)
-
-    # Text in Zwischenablage
+    # Text in Zwischenablage, kurz warten bis OS bereit
     pyperclip.copy(text)
+    time.sleep(0.05)
 
-    # Ctrl+V senden
-    with _keyboard_ctrl.pressed(Key.ctrl):
-        _keyboard_ctrl.press("v")
-        _keyboard_ctrl.release("v")
+    # Ctrl+V senden (via SendInput – kein pynput-Unicode-Nebeneffekt)
+    _send_ctrl_v()
