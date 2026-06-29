@@ -126,63 +126,43 @@ try {
     Write-Warn "GPU-Erkennung fehlgeschlagen - installiere CPU-Version"
 }
 
-$useCuda = $false
 if ($hasNvidia) {
-    Write-Host ""
-    $cudaChoice = Read-Host "  Soll die Nvidia-GPU fuer Whisper verwendet werden?`n  Nein empfohlen fuer aeltere Grafikkarten (j/n)"
-    if ($cudaChoice -eq "j" -or $cudaChoice -eq "J") {
-        $useCuda = $true
-        Write-Warn "Installiere PyTorch mit CUDA (ca. 2-4 GB Download, dauert einige Minuten) ..."
-        & $venvPip install torch --index-url https://download.pytorch.org/whl/cu118 --timeout 120 --quiet
-        Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
-    } else {
-        Write-Warn "Installiere PyTorch CPU-Version ..."
-        & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --timeout 120 --quiet
-        Write-OK "PyTorch (CPU) installiert"
-    }
+    Write-Warn "Installiere PyTorch mit CUDA-Unterstuetzung (ca. 2-4 GB Download, dauert einige Minuten) ..."
+    & $venvPip install torch --index-url https://download.pytorch.org/whl/cu121 --timeout 300 --quiet
+    Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
 } else {
     Write-Warn "Installiere PyTorch CPU-Version ..."
-    & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --timeout 120 --quiet
+    & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --timeout 300 --quiet
     Write-OK "PyTorch (CPU) installiert"
 }
+
+# Sicherstellen dass CUDA_VISIBLE_DEVICES nicht gesetzt ist (koennte GPU blockieren)
+[Environment]::SetEnvironmentVariable("CUDA_VISIBLE_DEVICES", $null, "User")
 
 # -----------------------------------------------------------------------
 # 6. Weitere Abhaengigkeiten installieren
 # -----------------------------------------------------------------------
 Write-Step "Weitere Pakete werden installiert ..."
-& $venvPip install -r "$InstallDir\requirements.txt" --timeout 120 --quiet
+& $venvPip install -r "$InstallDir\requirements.txt" --timeout 300 --quiet
 Write-OK "Alle Pakete installiert"
-
-# -----------------------------------------------------------------------
-# 6b. CUDA_VISIBLE_DEVICES Umgebungsvariable setzen (wirkt auch auf alten Code)
-# -----------------------------------------------------------------------
-if (-not $useCuda) {
-    [Environment]::SetEnvironmentVariable("CUDA_VISIBLE_DEVICES", "-1", "User")
-    Write-OK "CUDA deaktiviert (CUDA_VISIBLE_DEVICES=-1)"
-} else {
-    # Sicherstellen dass eine alte Einschraenkung aufgehoben wird
-    [Environment]::SetEnvironmentVariable("CUDA_VISIBLE_DEVICES", $null, "User")
-    Write-OK "CUDA aktiv"
-}
 
 # -----------------------------------------------------------------------
 # 6c. whisper_device in settings.json eintragen
 # -----------------------------------------------------------------------
 $settingsDir  = "$env:APPDATA\Blitztext"
 $settingsFile = "$settingsDir\settings.json"
-$whisperDevice = if ($useCuda) { "auto" } else { "cpu" }
 
 New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
 if (Test-Path $settingsFile) {
-    # Vorhandene settings.json einlesen und whisper_device setzen/aktualisieren
+    # Vorhandene settings.json einlesen und whisper_device auf "auto" setzen
     $json = Get-Content $settingsFile -Raw | ConvertFrom-Json
-    $json | Add-Member -NotePropertyName "whisper_device" -NotePropertyValue $whisperDevice -Force
+    $json | Add-Member -NotePropertyName "whisper_device" -NotePropertyValue "auto" -Force
     $json | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
 } else {
-    # Neue settings.json mit whisper_device anlegen
-    @{ whisper_device = $whisperDevice } | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+    # Neue settings.json mit whisper_device "auto" anlegen
+    @{ whisper_device = "auto" } | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
 }
-Write-OK "Whisper-Geraet eingestellt: $whisperDevice"
+Write-OK "Whisper-Geraet eingestellt: auto (GPU wenn vorhanden, sonst CPU)"
 
 # -----------------------------------------------------------------------
 # 7. Desktop-Verkuepfung erstellen
