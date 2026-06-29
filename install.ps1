@@ -71,6 +71,10 @@ if (Test-Path "$InstallDir\.git") {
     Push-Location $InstallDir
     git pull origin main
     Pop-Location
+} elseif (Test-Path $InstallDir) {
+    Write-Warn "Ordner vorhanden aber kein Git-Repository - wird neu geklont ..."
+    Remove-Item -Recurse -Force $InstallDir
+    git clone $GITHUB_URL $InstallDir
 } else {
     git clone $GITHUB_URL $InstallDir
 }
