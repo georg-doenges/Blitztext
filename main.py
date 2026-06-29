@@ -199,8 +199,7 @@ class BlitztextApp:
                             f"Claude-Fehler: {e} – Text wird unverändert eingefügt.",
                         )
 
-                space_leaks = self._settings.hotkey.lower().split("+").count("space") * 2
-                insert(text, hwnd=hwnd, delete_before=space_leaks)
+                insert(text, hwnd=hwnd)
                 log.info("Text eingefügt")
 
             except Exception as e:
