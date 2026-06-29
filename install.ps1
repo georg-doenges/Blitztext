@@ -149,7 +149,7 @@ if ($hasNvidia) {
 # 6. Weitere Abhaengigkeiten installieren
 # -----------------------------------------------------------------------
 Write-Step "Weitere Pakete werden installiert ..."
-& $venvPip install -r "$InstallDir\requirements.txt" --timeout 300 --quiet
+& $venvPip install -r "$InstallDir\requirements.txt" --timeout 300 --no-cache-dir --quiet
 Write-OK "Alle Pakete installiert"
 
 # -----------------------------------------------------------------------
