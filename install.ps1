@@ -129,6 +129,8 @@ try {
 if ($hasNvidia) {
     Write-Warn "Installiere PyTorch mit CUDA-Unterstuetzung (ca. 2-4 GB Download, dauert einige Minuten) ..."
     & $venvPip install torch --index-url https://download.pytorch.org/whl/cu121 --timeout 300 --quiet
+    Write-Warn "Installiere NVIDIA CUDA-Laufzeitbibliotheken ..."
+    & $venvPip install nvidia-cuda-runtime-cu12 --timeout 300 --quiet
     Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
 } else {
     Write-Warn "Installiere PyTorch CPU-Version ..."
@@ -152,17 +154,19 @@ Write-OK "Alle Pakete installiert"
 $settingsDir  = "$env:APPDATA\Blitztext"
 $settingsFile = "$settingsDir\settings.json"
 
+$whisperModel = if ($hasNvidia) { "medium" } else { "small" }
+
 New-Item -ItemType Directory -Force -Path $settingsDir | Out-Null
 if (Test-Path $settingsFile) {
-    # Vorhandene settings.json einlesen und whisper_device auf "auto" setzen
     $json = Get-Content $settingsFile -Raw | ConvertFrom-Json
     $json | Add-Member -NotePropertyName "whisper_device" -NotePropertyValue "auto" -Force
+    $json | Add-Member -NotePropertyName "whisper_model"  -NotePropertyValue $whisperModel -Force
     $json | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
 } else {
-    # Neue settings.json mit whisper_device "auto" anlegen
-    @{ whisper_device = "auto" } | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
+    @{ whisper_device = "auto"; whisper_model = $whisperModel } | ConvertTo-Json | Set-Content $settingsFile -Encoding UTF8
 }
-Write-OK "Whisper-Geraet eingestellt: auto (GPU wenn vorhanden, sonst CPU)"
+Write-OK "Whisper-Geraet: auto (GPU wenn vorhanden, sonst CPU)"
+Write-OK "Whisper-Modell: $whisperModel"
 
 # -----------------------------------------------------------------------
 # 7. Desktop-Verkuepfung erstellen
