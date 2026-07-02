@@ -62,10 +62,26 @@ def get_foreground_hwnd() -> int:
 
 
 def restore_focus(hwnd: int) -> None:
-    """Stellt den Fokus auf das Fenster mit dem gegebenen HWND zurück."""
-    if hwnd:
-        ctypes.windll.user32.SetForegroundWindow(hwnd)
-        time.sleep(_FOCUS_DELAY)
+    """Stellt den Fokus auf das Fenster mit dem gegebenen HWND zurück.
+
+    SetForegroundWindow allein scheitert in Hintergrundprozessen (Windows-Sperre).
+    AttachThreadInput hängt unsere Input-Queue kurz an die des aktuellen
+    Vordergrund-Threads, was die Sperre umgeht.
+    """
+    if not hwnd:
+        return
+    fg_hwnd = ctypes.windll.user32.GetForegroundWindow()
+    fg_tid  = ctypes.windll.user32.GetWindowThreadProcessId(fg_hwnd, None)
+    cur_tid = ctypes.windll.kernel32.GetCurrentThreadId()
+    attached = False
+    if fg_tid and fg_tid != cur_tid:
+        ctypes.windll.user32.AttachThreadInput(fg_tid, cur_tid, True)
+        attached = True
+    ctypes.windll.user32.BringWindowToTop(hwnd)
+    ctypes.windll.user32.SetForegroundWindow(hwnd)
+    if attached:
+        ctypes.windll.user32.AttachThreadInput(fg_tid, cur_tid, False)
+    time.sleep(_FOCUS_DELAY)
 
 
 def insert(text: str, hwnd: int = 0, delete_before: int = 0) -> None:

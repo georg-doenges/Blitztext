@@ -13,9 +13,11 @@ Threading-Übersicht:
 """
 from __future__ import annotations
 
+import ctypes
 import logging
 import os
 import queue
+import sys
 import threading
 
 from blitztext import overlay, settings as settings_mod
@@ -290,7 +292,16 @@ class BlitztextApp:
         self._tray.notify("Blitztext", f"Modus gewechselt: {mode_label}")
 
 
+def _ensure_single_instance() -> None:
+    """Beendet den Prozess sofort, wenn bereits eine Instanz läuft."""
+    _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "BlitztextSingleInstance")
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        sys.exit(0)
+    # Handle absichtlich nicht freigeben – bleibt bis Prozessende aktiv
+
+
 if __name__ == "__main__":
+    _ensure_single_instance()
     overlay.start()
     app = BlitztextApp()
     app.run()
