@@ -132,11 +132,23 @@ try {
 
 if ($hasNvidia) {
     Write-Warn "Installiere PyTorch mit CUDA-Unterstuetzung (ca. 2-4 GB Download, dauert einige Minuten) ..."
-    & $venvPip install torch --index-url https://download.pytorch.org/whl/cu121 --timeout 300 --quiet
+    & $venvPip install torch --index-url https://download.pytorch.org/whl/cu121 --no-cache-dir --timeout 300 --quiet
+    if ($LASTEXITCODE -ne 0) {
+        Write-Fail "PyTorch-Installation fehlgeschlagen (Exitcode $LASTEXITCODE)."
+        Write-Warn "Moegliche Ursache: Zu wenig Speicherplatz (benoetigt ca. 5 GB frei)."
+        Read-Host "`nDruecke Enter zum Beenden"
+        exit 1
+    }
     Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
 } else {
     Write-Warn "Installiere PyTorch CPU-Version ..."
-    & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --timeout 300 --quiet
+    & $venvPip install torch --index-url https://download.pytorch.org/whl/cpu --no-cache-dir --timeout 300 --quiet
+    if ($LASTEXITCODE -ne 0) {
+        Write-Fail "PyTorch-Installation fehlgeschlagen (Exitcode $LASTEXITCODE)."
+        Write-Warn "Moegliche Ursache: Zu wenig Speicherplatz."
+        Read-Host "`nDruecke Enter zum Beenden"
+        exit 1
+    }
     Write-OK "PyTorch (CPU) installiert"
 }
 
