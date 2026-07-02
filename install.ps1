@@ -133,8 +133,6 @@ try {
 if ($hasNvidia) {
     Write-Warn "Installiere PyTorch mit CUDA-Unterstuetzung (ca. 2-4 GB Download, dauert einige Minuten) ..."
     & $venvPip install torch --index-url https://download.pytorch.org/whl/cu121 --timeout 300 --quiet
-    Write-Warn "Installiere NVIDIA CUDA-Laufzeitbibliotheken ..."
-    & $venvPip install nvidia-cuda-runtime-cu12 --timeout 300 --quiet
     Write-OK "PyTorch mit CUDA-Unterstuetzung installiert"
 } else {
     Write-Warn "Installiere PyTorch CPU-Version ..."
