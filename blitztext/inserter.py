@@ -75,12 +75,12 @@ def restore_focus(hwnd: int) -> None:
     cur_tid = ctypes.windll.kernel32.GetCurrentThreadId()
     attached = False
     if fg_tid and fg_tid != cur_tid:
-        ctypes.windll.user32.AttachThreadInput(fg_tid, cur_tid, True)
+        ctypes.windll.user32.AttachThreadInput(cur_tid, fg_tid, True)
         attached = True
     ctypes.windll.user32.BringWindowToTop(hwnd)
     ctypes.windll.user32.SetForegroundWindow(hwnd)
     if attached:
-        ctypes.windll.user32.AttachThreadInput(fg_tid, cur_tid, False)
+        ctypes.windll.user32.AttachThreadInput(cur_tid, fg_tid, False)
     time.sleep(_FOCUS_DELAY)
 
 
