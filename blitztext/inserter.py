@@ -38,9 +38,22 @@ class _KEYBDINPUT(ctypes.Structure):
     ]
 
 
+class _MOUSEINPUT(ctypes.Structure):
+    # Muss in der Union enthalten sein, damit sizeof(_INPUT) == 40 Bytes (64-bit Windows).
+    # Windows verwirft SendInput lautlos, wenn cbSize falsch ist.
+    _fields_ = [
+        ("dx",          _wt.LONG),
+        ("dy",          _wt.LONG),
+        ("mouseData",   _wt.DWORD),
+        ("dwFlags",     _wt.DWORD),
+        ("time",        _wt.DWORD),
+        ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong)),
+    ]
+
+
 class _INPUT(ctypes.Structure):
     class _U(ctypes.Union):
-        _fields_ = [("ki", _KEYBDINPUT)]
+        _fields_ = [("mi", _MOUSEINPUT), ("ki", _KEYBDINPUT)]
     _anonymous_ = ("_u",)
     _fields_     = [("type", _wt.DWORD), ("_u", _U)]
 
