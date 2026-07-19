@@ -64,6 +64,7 @@ class BlitztextApp:
         self._worker_queue: queue.Queue = queue.Queue()
         self._state_lock = threading.Lock()
         self._is_recording = False
+        self._foreground_hwnd = 0
 
         # Tray (läuft auf Main Thread)
         self._tray = TrayApp(
@@ -288,7 +289,7 @@ class BlitztextApp:
         )
         settings_mod.save(self._settings)
         self._tray.update_settings(self._settings)
-        mode_label = "Poliert" if self._settings.mode == "poliert" else "Direkt"
+        mode_label = "Direkt" if self._settings.mode == "direkt" else "Poliert"
         self._tray.notify("Blitztext", f"Modus gewechselt: {mode_label}")
 
 
