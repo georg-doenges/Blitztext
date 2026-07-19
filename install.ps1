@@ -205,9 +205,13 @@ Write-OK "Verkuepfung 'Blitztext' auf dem Desktop erstellt"
 Write-Host ""
 $autostart = Read-Host "Soll Blitztext automatisch beim Windows-Start laufen? (j/n)"
 if ($autostart -eq "j" -or $autostart -eq "J") {
-    $startupDir = [Environment]::GetFolderPath("Startup")
-    Copy-Item $shortcutPath "$startupDir\Blitztext.lnk" -Force
-    Write-OK "Autostart eingerichtet"
+    # Registry-Eintrag setzen (gleicher Mechanismus wie die Autostart-Checkbox
+    # in den Einstellungen) statt einer zusaetzlichen Verknuepfung im
+    # Startup-Ordner - sonst gibt es zwei unabhaengige Autostart-Wege.
+    Push-Location $InstallDir
+    & $venvPython -c "from blitztext import autostart; autostart.enable(r'$InstallDir\main.py')"
+    Pop-Location
+    Write-OK "Autostart eingerichtet (Registry)"
 }
 
 # -----------------------------------------------------------------------
