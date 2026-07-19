@@ -15,6 +15,10 @@ MIN_DURATION_SECONDS = 0.3  # Kürzere Aufnahmen werden verworfen
 # Beim Erststart muss das Modell (~460 MB) heruntergeladen werden.
 # 30 Minuten decken auch sehr langsame Verbindungen ab.
 _TIMEOUT_SECONDS = 1800
+# Ist das Modell schon im Cache, sollte das Laden innerhalb von Sekunden
+# passieren - ein kurzer Timeout hier lässt echte Ladefehler viel schneller
+# auffallen, statt 30 Minuten auf den Watchdog zu warten.
+_TIMEOUT_SECONDS_CACHED = 120
 
 _TIMEOUT_MESSAGE = (
     "Whisper konnte nicht geladen werden.\n\n"
@@ -41,8 +45,10 @@ class Transcriber:
         self._on_status_callback: Optional[Callable[[str, str], None]] = None
         self._current_status: Optional[Tuple[str, str]] = None
 
-        # Watchdog: löst aus, wenn das Laden zu lange dauert
-        self._watchdog = threading.Timer(_TIMEOUT_SECONDS, self._loading_timeout)
+        # Watchdog: löst aus, wenn das Laden zu lange dauert.
+        # Kurzer Timeout als Default; wird in _load_model auf _TIMEOUT_SECONDS
+        # verlängert, sobald feststeht, dass ein Modell-Download nötig ist.
+        self._watchdog = threading.Timer(_TIMEOUT_SECONDS_CACHED, self._loading_timeout)
         self._watchdog.daemon = True
         self._watchdog.start()
 
@@ -79,10 +85,16 @@ class Transcriber:
     def transcribe_file(self, file_path: str, language: str = "de") -> str:
         """
         Lädt eine Audio-Datei (mp3, m4a, wav, ogg, flac …) und transkribiert sie.
-        Blockiert, bis das Modell geladen ist.
+        Blockiert, bis das Modell geladen ist (oder das Laden fehlschlägt).
         Benötigt ffmpeg im System-PATH.
         """
-        self._ready.wait()
+        # Anders als beim Hotkey-Pfad (der is_ready vorher prüft) wird diese
+        # Methode direkt aus dem Einstellungsfenster aufgerufen. Ohne Timeout
+        # würde ein fehlgeschlagenes Laden den Aufruf ewig blockieren.
+        if not self._ready.wait(timeout=30):
+            raise RuntimeError(
+                "Whisper-Modell ist nicht bereit (Laden fehlgeschlagen oder dauert noch an)."
+            )
 
         import whisper as _whisper
         audio = _whisper.load_audio(file_path)
@@ -187,64 +199,87 @@ class Transcriber:
 
     def _load_model(self) -> None:
         import logging
-        import torch
-        import whisper  # Import hier, damit startup schnell bleibt
-
         log = logging.getLogger(__name__)
-        log.info("Whisper-Loader gestartet (Modell: %s, device-setting: %s)",
-                 self._model_name, self._whisper_device)
 
-        # sys.stderr/stdout absichern bevor whisper/tqdm sie verwendet
-        self._fix_stdio()
+        try:
+            import torch
+            import whisper  # Import hier, damit startup schnell bleibt
 
-        # Defekte (leere) Cache-Datei löschen, damit whisper sauber neu lädt
-        cache_path = self._model_cache_path(self._model_name)
-        self._delete_cache_if_corrupt(cache_path)
+            log.info("Whisper-Loader gestartet (Modell: %s, device-setting: %s)",
+                     self._model_name, self._whisper_device)
 
-        # Prüfen ob Modell-Download nötig ist
-        needs_download = cache_path and not os.path.isfile(cache_path)
-        if needs_download:
-            log.info("Modell nicht im Cache – Download erforderlich (~460 MB)")
-            self._notify_status(
-                "Blitztext",
-                "Whisper-Modell wird heruntergeladen (~460 MB).\n"
-                "Das kann mehrere Minuten dauern …"
-            )
+            # sys.stderr/stdout absichern bevor whisper/tqdm sie verwendet
+            self._fix_stdio()
 
-        # Gerät bestimmen
-        if self._whisper_device == "cpu":
-            use_cuda = False
-            log.info("CPU-Modus erzwungen (whisper_device=cpu)")
-        elif self._whisper_device == "cuda":
-            use_cuda = True
-            log.info("CUDA-Modus erzwungen (whisper_device=cuda)")
-        else:
-            use_cuda = torch.cuda.is_available()
-            log.info("Auto-Erkennung: torch.cuda.is_available() = %s", use_cuda)
+            # Defekte (leere) Cache-Datei löschen, damit whisper sauber neu lädt
+            cache_path = self._model_cache_path(self._model_name)
+            self._delete_cache_if_corrupt(cache_path)
+
+            # Prüfen ob Modell-Download nötig ist
+            needs_download = cache_path and not os.path.isfile(cache_path)
+            if needs_download:
+                log.info("Modell nicht im Cache – Download erforderlich (~460 MB)")
+                self._notify_status(
+                    "Blitztext",
+                    "Whisper-Modell wird heruntergeladen (~460 MB).\n"
+                    "Das kann mehrere Minuten dauern …"
+                )
+                # Kurzer Default-Timeout reicht für einen Download nicht aus
+                self._watchdog.cancel()
+                self._watchdog = threading.Timer(_TIMEOUT_SECONDS, self._loading_timeout)
+                self._watchdog.daemon = True
+                self._watchdog.start()
+
+            # Gerät bestimmen
+            if self._whisper_device == "cpu":
+                use_cuda = False
+                log.info("CPU-Modus erzwungen (whisper_device=cpu)")
+            elif self._whisper_device == "cuda":
+                use_cuda = True
+                log.info("CUDA-Modus erzwungen (whisper_device=cuda)")
+            else:
+                use_cuda = torch.cuda.is_available()
+                log.info("Auto-Erkennung: torch.cuda.is_available() = %s", use_cuda)
+                if use_cuda:
+                    log.info("CUDA-Gerät: %s", torch.cuda.get_device_name(0))
+
             if use_cuda:
-                log.info("CUDA-Gerät: %s", torch.cuda.get_device_name(0))
-
-        if use_cuda:
-            try:
-                self._device = "cuda"
-                log.info("Lade Whisper auf CUDA ...")
-                self._model = whisper.load_model(self._model_name, device="cuda")
-                log.info("Whisper geladen auf CUDA")
-            except Exception as e:
-                log.warning("CUDA-Loading fehlgeschlagen (%s) – falle auf CPU zurück", e)
-                # Nach fehlgeschlagenem CUDA-Versuch: korrupte Cache-Datei bereinigen
-                self._delete_cache_if_corrupt(cache_path)
+                try:
+                    self._device = "cuda"
+                    log.info("Lade Whisper auf CUDA ...")
+                    self._model = whisper.load_model(self._model_name, device="cuda")
+                    log.info("Whisper geladen auf CUDA")
+                except Exception as e:
+                    log.warning("CUDA-Loading fehlgeschlagen (%s) – falle auf CPU zurück", e)
+                    # Nach fehlgeschlagenem CUDA-Versuch: korrupte Cache-Datei bereinigen
+                    self._delete_cache_if_corrupt(cache_path)
+                    self._device = "cpu"
+                    log.info("Lade Whisper auf CPU (Fallback) ...")
+                    self._model = whisper.load_model(self._model_name, device="cpu")
+                    log.info("Whisper geladen auf CPU (Fallback)")
+            else:
                 self._device = "cpu"
-                log.info("Lade Whisper auf CPU (Fallback) ...")
+                log.info("Lade Whisper auf CPU ...")
                 self._model = whisper.load_model(self._model_name, device="cpu")
-                log.info("Whisper geladen auf CPU (Fallback)")
-        else:
-            self._device = "cpu"
-            log.info("Lade Whisper auf CPU ...")
-            self._model = whisper.load_model(self._model_name, device="cpu")
-            log.info("Whisper geladen auf CPU")
+                log.info("Whisper geladen auf CPU")
 
-        self._watchdog.cancel()
-        self._ready.set()
-        if self._on_ready_callback:
-            self._on_ready_callback()
+            self._watchdog.cancel()
+            self._ready.set()
+            if self._on_ready_callback:
+                self._on_ready_callback()
+
+        except Exception as e:
+            # Ohne diesen Fang stirbt der Thread hier still (unter pythonw.exe
+            # ist stderr None) und der Nutzer sieht erst nach dem Watchdog-
+            # Timeout eine Meldung. Stattdessen: sofort loggen und melden.
+            log.exception("Whisper-Loader fehlgeschlagen")
+            self._watchdog.cancel()
+            if self._on_error_callback:
+                self._on_error_callback(
+                    "Whisper konnte nicht geladen werden.\n\n"
+                    f"Fehler: {e}\n\n"
+                    "Mögliche Ursachen:\n"
+                    "- PyTorch-Installation beschädigt oder inkompatibel\n"
+                    "- Kein Internetzugang beim Erststart (Modell-Download)\n\n"
+                    "→ Log-Datei prüfen oder Blitztext neu installieren."
+                )
