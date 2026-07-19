@@ -97,13 +97,12 @@ def restore_focus(hwnd: int) -> None:
     time.sleep(_FOCUS_DELAY)
 
 
-def insert(text: str, hwnd: int = 0, delete_before: int = 0) -> None:
+def insert(text: str, hwnd: int = 0) -> None:
     """
     Fügt *text* an der aktuellen Cursor-Position ein.
 
     :param text: Der einzufügende Text.
     :param hwnd: HWND des Zielfensters (0 = kein expliziter Focus-Restore).
-    :param delete_before: Anzahl Backspaces, die vor dem Einfügen gesendet werden.
     """
     if not text:
         return
