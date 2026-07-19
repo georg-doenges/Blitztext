@@ -27,6 +27,9 @@ class Settings:
     language: str = "de"          # Whisper-Sprachcode oder "" für auto-detect
     whisper_model: str = "small"
     whisper_device: str = "auto"  # "auto" = CUDA wenn verfügbar, "cpu" = immer CPU
+    transcription_backend: str = "local"  # "local" = Whisper auf diesem Rechner, "openai" = OpenAI-API
+    openai_api_key: str = ""
+    openai_transcribe_model: str = "gpt-4o-mini-transcribe"  # "whisper-1" | "gpt-4o-mini-transcribe" | "gpt-4o-transcribe"
 
 
 def load() -> Settings:
