@@ -1,4 +1,4 @@
-"""
+r"""
 Settings – lädt und speichert die Konfiguration unter %APPDATA%\Blitztext\settings.json.
 Atomisches Schreiben über temporäre Datei verhindert Datenverlust bei Absturz.
 """
