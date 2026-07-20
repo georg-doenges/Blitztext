@@ -109,8 +109,9 @@ class SettingsWindow(tk.Tk):
             side="left", padx=8
         )
 
-        # Anfangszustand (aktiviert/deaktiviert) der Spracherkennungs-Felder setzen
+        # Anfangssichtbarkeit der bedingten Detailblöcke setzen
         self._on_backend_change()
+        self._on_mode_change()
 
     def _build_aufnahme_section(self, parent: tk.Widget, pad: dict) -> None:
         frame = ttk.LabelFrame(parent, text="Aufnahme")
@@ -164,8 +165,9 @@ class SettingsWindow(tk.Tk):
             command=self._on_backend_change,
         ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
 
-        local_sub = ttk.Frame(frame)
-        local_sub.grid(row=1, column=0, sticky="w", padx=(28, 10))
+        self._local_sub = ttk.Frame(frame)
+        self._local_sub.grid(row=1, column=0, sticky="w", padx=(28, 10))
+        local_sub = self._local_sub
 
         ttk.Label(local_sub, text="Modell:").grid(row=0, column=0, sticky="w", pady=2)
         self._whisper_model_var = tk.StringVar(
@@ -208,8 +210,9 @@ class SettingsWindow(tk.Tk):
             command=self._on_backend_change,
         ).grid(row=3, column=0, sticky="w", padx=10, pady=(2, 2))
 
-        openai_sub = ttk.Frame(frame)
-        openai_sub.grid(row=4, column=0, sticky="w", padx=(28, 10), pady=(0, 8))
+        self._openai_sub = ttk.Frame(frame)
+        self._openai_sub.grid(row=4, column=0, sticky="w", padx=(28, 10), pady=(0, 8))
+        openai_sub = self._openai_sub
 
         ttk.Label(openai_sub, text="Modell:").grid(row=0, column=0, sticky="w", pady=2)
         self._openai_model_var = tk.StringVar(
@@ -247,29 +250,64 @@ class SettingsWindow(tk.Tk):
         self._mode_var = tk.StringVar(master=self, value=self._settings.mode)
         ttk.Radiobutton(
             frame, text="Direkt (keine Nachbearbeitung)",
-            variable=self._mode_var, value="direkt",
-        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=10, pady=(8, 2))
+            variable=self._mode_var, value="direkt", command=self._on_mode_change,
+        ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
         ttk.Radiobutton(
             frame, text="Poliert – Konservativ  (nur Fehler & Füllwörter)",
-            variable=self._mode_var, value="poliert_konservativ",
-        ).grid(row=1, column=0, columnspan=3, sticky="w", padx=10, pady=2)
+            variable=self._mode_var, value="poliert_konservativ", command=self._on_mode_change,
+        ).grid(row=1, column=0, sticky="w", padx=10, pady=2)
         ttk.Radiobutton(
             frame, text="Poliert – Ausgefeilt  (vollständige Überarbeitung, E-Mail-Format)",
-            variable=self._mode_var, value="poliert_ausgefeilt",
-        ).grid(row=2, column=0, columnspan=3, sticky="w", padx=10, pady=2)
+            variable=self._mode_var, value="poliert_ausgefeilt", command=self._on_mode_change,
+        ).grid(row=2, column=0, sticky="w", padx=10, pady=2)
 
-        ttk.Label(frame, text="Claude API Key:").grid(
-            row=3, column=0, sticky="w", padx=10, pady=(6, 8)
+        # --- Anbieter + API Key (nur sichtbar, wenn ein Poliert-Modus gewählt ist) ---
+        self._provider_sub = ttk.Frame(frame)
+        self._provider_sub.grid(row=3, column=0, sticky="w", padx=(28, 10), pady=(4, 8))
+
+        self._polish_provider_var = tk.StringVar(
+            master=self, value=self._settings.polish_provider
         )
+        ttk.Label(self._provider_sub, text="Anbieter:").grid(row=0, column=0, sticky="w")
+        ttk.Radiobutton(
+            self._provider_sub, text="Claude",
+            variable=self._polish_provider_var, value="claude",
+            command=self._on_polish_provider_change,
+        ).grid(row=0, column=1, sticky="w", padx=(6, 12))
+        ttk.Radiobutton(
+            self._provider_sub, text="OpenAI",
+            variable=self._polish_provider_var, value="openai",
+            command=self._on_polish_provider_change,
+        ).grid(row=0, column=2, sticky="w")
+
+        # Claude-Key-Zeile
+        self._claude_key_row = ttk.Frame(self._provider_sub)
+        self._claude_key_row.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        ttk.Label(self._claude_key_row, text="Claude API Key:").grid(row=0, column=0, sticky="w")
         self._api_key_var = tk.StringVar(master=self, value=self._settings.claude_api_key)
         self._api_entry = ttk.Entry(
-            frame, textvariable=self._api_key_var, show="*", width=28
+            self._claude_key_row, textvariable=self._api_key_var, show="*", width=28
         )
-        self._api_entry.grid(row=3, column=1, sticky="w", pady=(6, 8))
+        self._api_entry.grid(row=0, column=1, sticky="w", padx=(6, 6))
         self._show_key = False
-        ttk.Button(frame, text="Anzeigen", command=self._toggle_key_visibility).grid(
-            row=3, column=2, sticky="w", padx=(6, 10), pady=(6, 8)
+        ttk.Button(
+            self._claude_key_row, text="Anzeigen", command=self._toggle_key_visibility
+        ).grid(row=0, column=2, sticky="w")
+
+        # OpenAI-Key-Zeile – nutzt dieselbe Variable wie im Spracherkennungs-Block,
+        # damit derselbe Key an beiden Stellen automatisch synchron bleibt.
+        self._openai_key_row = ttk.Frame(self._provider_sub)
+        self._openai_key_row.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        ttk.Label(self._openai_key_row, text="OpenAI API Key:").grid(row=0, column=0, sticky="w")
+        self._openai_key_entry_polish = ttk.Entry(
+            self._openai_key_row, textvariable=self._openai_key_var, show="*", width=28
         )
+        self._openai_key_entry_polish.grid(row=0, column=1, sticky="w", padx=(6, 6))
+        self._show_openai_key_polish = False
+        ttk.Button(
+            self._openai_key_row, text="Anzeigen",
+            command=self._toggle_openai_key_polish_visibility,
+        ).grid(row=0, column=2, sticky="w")
 
     def _build_system_section(self, parent: tk.Widget, pad: dict) -> None:
         frame = ttk.LabelFrame(parent, text="System")
@@ -293,20 +331,43 @@ class SettingsWindow(tk.Tk):
         ).pack(side="left")
 
     # ------------------------------------------------------------------
-    # Spracherkennung: Felder je nach gewähltem Backend (de)aktivieren
+    # Spracherkennung: Details nur fuer das gewaehlte Backend einblenden
     # ------------------------------------------------------------------
 
     def _on_backend_change(self) -> None:
-        is_local = self._backend_var.get() == "local"
-        self._whisper_model_cb.config(state="readonly" if is_local else "disabled")
-        self._whisper_device_cb.config(state="readonly" if is_local else "disabled")
-        self._openai_model_cb.config(state="disabled" if is_local else "readonly")
-        self._openai_key_entry.config(state="disabled" if is_local else "normal")
-        self._openai_key_toggle_btn.config(state="disabled" if is_local else "normal")
+        if self._backend_var.get() == "local":
+            self._openai_sub.grid_remove()
+            self._local_sub.grid()
+        else:
+            self._local_sub.grid_remove()
+            self._openai_sub.grid()
 
     def _toggle_openai_key_visibility(self) -> None:
         self._show_openai_key = not self._show_openai_key
         self._openai_key_entry.config(show="" if self._show_openai_key else "*")
+
+    # ------------------------------------------------------------------
+    # Textveredelung: Anbieter/Key-Zeile nur bei Poliert-Modus einblenden
+    # ------------------------------------------------------------------
+
+    def _on_mode_change(self) -> None:
+        if self._mode_var.get() == "direkt":
+            self._provider_sub.grid_remove()
+        else:
+            self._provider_sub.grid()
+            self._on_polish_provider_change()
+
+    def _on_polish_provider_change(self) -> None:
+        if self._polish_provider_var.get() == "claude":
+            self._openai_key_row.grid_remove()
+            self._claude_key_row.grid()
+        else:
+            self._claude_key_row.grid_remove()
+            self._openai_key_row.grid()
+
+    def _toggle_openai_key_polish_visibility(self) -> None:
+        self._show_openai_key_polish = not self._show_openai_key_polish
+        self._openai_key_entry_polish.config(show="" if self._show_openai_key_polish else "*")
 
     # ------------------------------------------------------------------
     # Hotkey-Aufnahme
@@ -391,6 +452,7 @@ class SettingsWindow(tk.Tk):
 
         self._settings.hotkey = self._hotkey_var.get() or self._settings.hotkey
         self._settings.mode = self._mode_var.get()
+        self._settings.polish_provider = self._polish_provider_var.get()
         self._settings.claude_api_key = self._api_key_var.get()
         self._settings.language = self._lang_var.get()
         self._settings.whisper_model = self._whisper_model_var.get()
@@ -407,11 +469,15 @@ class SettingsWindow(tk.Tk):
         else:
             autostart.disable()
 
-        if self._settings.transcription_backend == "openai" and not self._settings.openai_api_key:
+        needs_openai_key = (
+            self._settings.transcription_backend == "openai"
+            or (self._settings.mode != "direkt" and self._settings.polish_provider == "openai")
+        )
+        if needs_openai_key and not self._settings.openai_api_key:
             messagebox.showwarning(
                 "Blitztext",
-                "Kein OpenAI API Key eingetragen – die Cloud-Spracherkennung "
-                "funktioniert erst, wenn einer eingetragen wird.\n\n"
+                "Kein OpenAI API Key eingetragen – die ausgewählte(n) OpenAI-Funktion(en) "
+                "funktionieren erst, wenn einer eingetragen wird.\n\n"
                 "Die Einstellungen wurden trotzdem gespeichert.",
             )
 
