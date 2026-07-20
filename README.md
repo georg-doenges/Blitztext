@@ -65,6 +65,22 @@ Rechtsklick auf das Symbol öffnet ein Menü mit weiteren Optionen.
 
 ---
 
+## Spracherkennung: Lokal oder OpenAI-Cloud
+
+Blitztext kann Aufnahmen auf zwei Wegen in Text umwandeln, umschaltbar in den Einstellungen unter **„Spracherkennung"**:
+
+**Lokal** (Standard)
+Whisper läuft direkt auf deinem Rechner – komplett offline, keine Kosten, keine Daten verlassen den PC. Mit einer NVIDIA-Grafikkarte ist das Modell „medium" in wenigen Sekunden fertig; ohne GPU empfiehlt sich ein kleineres Modell („small" oder „base") für akzeptable Geschwindigkeit.
+
+**OpenAI-Cloud** (optional, erfordert OpenAI-API-Key)
+Die Aufnahme wird zur Transkription an OpenAI geschickt. Sinnvoll vor allem ohne eigene GPU, da die Cloud-Modelle deutlich genauer sind als ein kleines lokales Modell auf der CPU. Kein Modell-Download, sofort einsatzbereit.
+
+- **Datenschutz:** Bei diesem Backend wird die Sprachaufnahme über das Internet an OpenAI übertragen. Für vertrauliche Inhalte das lokale Backend verwenden.
+- **Kosten:** ungefähr 0,003–0,006 USD pro Minute Audio (abhängig vom gewählten Modell) – aktuelle Preise auf [openai.com/pricing](https://openai.com/pricing) prüfen.
+- Ein Wechsel des Backends wird erst nach einem Neustart von Blitztext aktiv; Änderungen am OpenAI-Modell oder -Key wirken sofort.
+
+---
+
 ## Die Modi
 
 Blitztext hat drei Arbeitsmodi, wählbar in den Einstellungen oder per Schnellwechsel im Tray-Menü.
@@ -90,20 +106,33 @@ Rechtsklick auf das Tray-Symbol → **„Einstellungen …"**
 |---|---|
 | Hotkey | Tastenkürzel ändern (Standard: Strg+Umschalt+Leertaste) |
 | Sprache | Sprache der Aufnahme (Standard: Deutsch) |
-| Whisper-Modell | Genauigkeit vs. Geschwindigkeit (Standard: small) |
-| Whisper-Gerät | GPU/CPU-Auswahl: auto (empfohlen), cpu, cuda |
+| Spracherkennung | Lokal (Whisper) oder OpenAI-Cloud, siehe oben |
+| Whisper-Modell / -Gerät | Nur bei „Lokal": Genauigkeit vs. Geschwindigkeit, GPU/CPU-Auswahl |
+| OpenAI-Modell / API Key | Nur bei „OpenAI-Cloud": Modellauswahl und API Key |
 | Claude API Key | Nötig für die Poliert-Modi (Konservativ und Ausgefeilt) |
 | Autostart | Beim Windows-Start automatisch starten |
 
 ---
 
-## Claude API Key (für die Poliert-Modi)
+## API Keys
+
+### Claude (für die Poliert-Modi)
 
 Den Poliert-Modus brauchst du nicht, wenn dir der Direkt-Modus reicht. Falls du ihn nutzen möchtest:
 
 1. Gehe auf [console.anthropic.com](https://console.anthropic.com) und erstelle ein Konto.
 2. Erstelle einen API Key.
 3. Trage ihn in den Einstellungen von Blitztext ein.
+
+### OpenAI (für die Cloud-Spracherkennung)
+
+Nur nötig, wenn du die Spracherkennung auf **„OpenAI-Cloud"** umstellst:
+
+1. Gehe auf [platform.openai.com](https://platform.openai.com) und erstelle ein Konto.
+2. Erstelle einen API Key unter „API keys".
+3. Trage ihn in den Einstellungen von Blitztext im Bereich „Spracherkennung" ein.
+
+**Hinweis:** Beide Keys werden unverschlüsselt (Klartext) in `%APPDATA%\Blitztext\settings.json` gespeichert – für ein rein persönlich genutztes Gerät unkritisch, auf einem gemeinsam genutzten Rechner sollte niemand sonst Zugriff auf dieses Benutzerkonto haben.
 
 ---
 
@@ -116,7 +145,7 @@ Klicke auf den kleinen Pfeil `^` neben der Uhr – das Symbol könnte dort verst
 Klicke einmal in das Textfeld, bevor du den Hotkey drückst, damit das richtige Fenster aktiv ist.
 
 **Blitztext reagiert nicht sofort nach dem Start.**
-Das Spracherkennungs-Modell wird beim ersten Start heruntergeladen (~460 MB) und geladen – das dauert beim allerersten Mal einige Minuten. Sobald es bereit ist, erscheint eine kleine Benachrichtigung: *„Whisper bereit – Hotkey aktiv."*
+Bei lokaler Spracherkennung wird das Whisper-Modell beim ersten Start heruntergeladen (~460 MB) und geladen – das dauert beim allerersten Mal einige Minuten. Sobald es bereit ist, erscheint eine kleine Benachrichtigung: *„Bereit – Hotkey aktiv."* Bei OpenAI-Cloud entfällt das Laden – hier reicht ein gültiger API Key.
 
 **In der Eingabeaufforderung (cmd) funktioniert das Einfügen nicht.**
 Das ist eine bekannte Einschränkung. In normalen Programmen wie Word, Outlook oder dem Browser funktioniert alles problemlos.
