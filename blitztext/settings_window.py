@@ -3,12 +3,15 @@ SettingsWindow – tkinter-Einstellungsfenster.
 
 Läuft in einem eigenen Thread (tkinter ist nicht thread-safe).
 Singleton-Guard verhindert mehrere gleichzeitig offene Fenster.
+
+Gliederung in vier Blöcke (LabelFrames): Aufnahme, Spracherkennung
+(Lokal/OpenAI-Cloud), Textveredelung (optional), System.
 """
 from __future__ import annotations
 
 import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 from typing import Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,6 +20,8 @@ if TYPE_CHECKING:
 _window_thread: Optional[threading.Thread] = None
 _window_instance: Optional["SettingsWindow"] = None
 _lock = threading.Lock()
+
+_OPENAI_MODELS = ["gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1"]
 
 
 def open_settings(
@@ -85,126 +90,199 @@ class SettingsWindow(tk.Tk):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        pad = {"padx": 12, "pady": 6}
+        pad = {"padx": 10, "pady": 4}
 
-        # --- Hotkey ---
-        ttk.Label(self, text="Tastenkombination:").grid(
+        container = ttk.Frame(self)
+        container.pack(fill="both", expand=True, padx=12, pady=12)
+
+        self._build_aufnahme_section(container, pad)
+        self._build_spracherkennung_section(container, pad)
+        self._build_textveredelung_section(container, pad)
+        self._build_system_section(container, pad)
+
+        btn_frame = ttk.Frame(container)
+        btn_frame.pack(pady=(8, 0))
+        ttk.Button(btn_frame, text="Speichern", command=self._save).pack(
+            side="left", padx=8
+        )
+        ttk.Button(btn_frame, text="Abbrechen", command=self.destroy).pack(
+            side="left", padx=8
+        )
+
+        # Anfangszustand (aktiviert/deaktiviert) der Spracherkennungs-Felder setzen
+        self._on_backend_change()
+
+    def _build_aufnahme_section(self, parent: tk.Widget, pad: dict) -> None:
+        frame = ttk.LabelFrame(parent, text="Aufnahme")
+        frame.pack(fill="x", pady=(0, 8))
+        frame.columnconfigure(1, weight=1)
+
+        ttk.Label(frame, text="Tastenkombination:").grid(
             row=0, column=0, sticky="w", **pad
         )
         self._hotkey_var = tk.StringVar(master=self, value=self._settings.hotkey)
         self._hotkey_entry = ttk.Entry(
-            self, textvariable=self._hotkey_var, width=24, state="readonly"
+            frame, textvariable=self._hotkey_var, width=24, state="readonly"
         )
         self._hotkey_entry.grid(row=0, column=1, sticky="ew", **pad)
         self._record_btn = ttk.Button(
-            self, text="Aufnehmen", command=self._start_hotkey_capture
+            frame, text="Aufnehmen", command=self._start_hotkey_capture
         )
         self._record_btn.grid(row=0, column=2, **pad)
 
-        # Hinweis-Label für Hotkey-Aufnahme
-        self._hotkey_hint = ttk.Label(self, text="", foreground="gray")
-        self._hotkey_hint.grid(row=1, column=0, columnspan=3, **pad)
+        self._hotkey_hint = ttk.Label(frame, text="", foreground="gray")
+        self._hotkey_hint.grid(row=1, column=0, columnspan=3, sticky="w", **pad)
 
-        # --- Modus ---
-        ttk.Label(self, text="Modus:").grid(row=2, column=0, sticky="nw", **pad)
-        self._mode_var = tk.StringVar(master=self, value=self._settings.mode)
-        mode_frame = ttk.Frame(self)
-        mode_frame.grid(row=2, column=1, columnspan=2, sticky="w", **pad)
-
-        ttk.Radiobutton(
-            mode_frame, text="Direkt",
-            variable=self._mode_var, value="direkt",
-        ).grid(row=0, column=0, columnspan=2, sticky="w")
-
-        ttk.Label(mode_frame, text="Poliert (Claude):", foreground="gray").grid(
-            row=1, column=0, columnspan=2, sticky="w", pady=(6, 2)
-        )
-        ttk.Radiobutton(
-            mode_frame, text="Konservativ  (nur Fehler & Füllwörter)",
-            variable=self._mode_var, value="poliert_konservativ",
-        ).grid(row=2, column=0, columnspan=2, sticky="w", padx=(16, 0))
-        ttk.Radiobutton(
-            mode_frame, text="Ausgefeilt  (vollständige Überarbeitung, E-Mail-Format)",
-            variable=self._mode_var, value="poliert_ausgefeilt",
-        ).grid(row=3, column=0, columnspan=2, sticky="w", padx=(16, 0))
-
-        # --- Claude API Key ---
-        ttk.Label(self, text="Claude API Key:").grid(row=3, column=0, sticky="w", **pad)
-        self._api_key_var = tk.StringVar(master=self, value=self._settings.claude_api_key)
-        self._api_entry = ttk.Entry(
-            self, textvariable=self._api_key_var, show="*", width=32
-        )
-        self._api_entry.grid(row=3, column=1, sticky="ew", **pad)
-        self._show_key = False
-        ttk.Button(self, text="Anzeigen", command=self._toggle_key_visibility).grid(
-            row=3, column=2, **pad
-        )
-
-        # --- Sprache ---
-        ttk.Label(self, text="Sprache (Whisper):").grid(
-            row=4, column=0, sticky="w", **pad
+        ttk.Label(frame, text="Sprache (Whisper):").grid(
+            row=2, column=0, sticky="w", **pad
         )
         self._lang_var = tk.StringVar(master=self, value=self._settings.language)
         lang_cb = ttk.Combobox(
-            self,
+            frame,
             textvariable=self._lang_var,
             values=["de", "en", "fr", "es", "it", ""],
             width=8,
             state="readonly",
         )
-        lang_cb.grid(row=4, column=1, sticky="w", **pad)
-        ttk.Label(self, text='(leer = auto)', foreground="gray").grid(
-            row=4, column=2, sticky="w"
+        lang_cb.grid(row=2, column=1, sticky="w", **pad)
+        ttk.Label(frame, text="(leer = auto)", foreground="gray").grid(
+            row=2, column=2, sticky="w"
         )
 
-        # --- Whisper-Modell ---
-        ttk.Label(self, text="Whisper-Modell:").grid(
-            row=5, column=0, sticky="w", **pad
+    def _build_spracherkennung_section(self, parent: tk.Widget, pad: dict) -> None:
+        frame = ttk.LabelFrame(parent, text="Spracherkennung")
+        frame.pack(fill="x", pady=(0, 8))
+
+        self._backend_var = tk.StringVar(
+            master=self, value=self._settings.transcription_backend
         )
+
+        # --- Lokal ---
+        ttk.Radiobutton(
+            frame, text="Lokal (Whisper auf diesem Rechner)",
+            variable=self._backend_var, value="local",
+            command=self._on_backend_change,
+        ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+
+        local_sub = ttk.Frame(frame)
+        local_sub.grid(row=1, column=0, sticky="w", padx=(28, 10))
+
+        ttk.Label(local_sub, text="Modell:").grid(row=0, column=0, sticky="w", pady=2)
         self._whisper_model_var = tk.StringVar(
             master=self, value=self._settings.whisper_model
         )
-        model_cb = ttk.Combobox(
-            self,
+        self._whisper_model_cb = ttk.Combobox(
+            local_sub,
             textvariable=self._whisper_model_var,
             values=["tiny", "base", "small", "medium", "large"],
             width=8,
             state="readonly",
         )
-        model_cb.grid(row=5, column=1, sticky="w", **pad)
-        ttk.Label(self, text="(Neustart erforderlich)", foreground="gray").grid(
-            row=5, column=2, sticky="w"
-        )
+        self._whisper_model_cb.grid(row=0, column=1, sticky="w", padx=(4, 16))
 
-        # --- Whisper-Gerät ---
-        ttk.Label(self, text="Whisper-Gerät:").grid(
-            row=6, column=0, sticky="w", **pad
-        )
+        ttk.Label(local_sub, text="Gerät:").grid(row=0, column=2, sticky="w")
         self._whisper_device_var = tk.StringVar(
             master=self, value=self._settings.whisper_device
         )
-        device_cb = ttk.Combobox(
-            self,
+        self._whisper_device_cb = ttk.Combobox(
+            local_sub,
             textvariable=self._whisper_device_var,
             values=["auto", "cpu", "cuda"],
             width=8,
             state="readonly",
         )
-        device_cb.grid(row=6, column=1, sticky="w", **pad)
-        ttk.Label(self, text="(Neustart erforderlich)", foreground="gray").grid(
-            row=6, column=2, sticky="w"
+        self._whisper_device_cb.grid(row=0, column=3, sticky="w", padx=(4, 0))
+
+        ttk.Label(local_sub, text="(Neustart erforderlich)", foreground="gray").grid(
+            row=1, column=0, columnspan=4, sticky="w", pady=(2, 6)
         )
 
-        # --- Autostart ---
+        ttk.Separator(frame, orient="horizontal").grid(
+            row=2, column=0, sticky="ew", padx=10, pady=4
+        )
+
+        # --- OpenAI-Cloud ---
+        ttk.Radiobutton(
+            frame, text="OpenAI-Cloud (API-Key erforderlich)",
+            variable=self._backend_var, value="openai",
+            command=self._on_backend_change,
+        ).grid(row=3, column=0, sticky="w", padx=10, pady=(2, 2))
+
+        openai_sub = ttk.Frame(frame)
+        openai_sub.grid(row=4, column=0, sticky="w", padx=(28, 10), pady=(0, 8))
+
+        ttk.Label(openai_sub, text="Modell:").grid(row=0, column=0, sticky="w", pady=2)
+        self._openai_model_var = tk.StringVar(
+            master=self, value=self._settings.openai_transcribe_model
+        )
+        self._openai_model_cb = ttk.Combobox(
+            openai_sub,
+            textvariable=self._openai_model_var,
+            values=_OPENAI_MODELS,
+            width=22,
+            state="readonly",
+        )
+        self._openai_model_cb.grid(row=0, column=1, sticky="w", padx=(4, 0))
+
+        ttk.Label(openai_sub, text="OpenAI API Key:").grid(
+            row=1, column=0, sticky="w", pady=(6, 0)
+        )
+        self._openai_key_var = tk.StringVar(
+            master=self, value=self._settings.openai_api_key
+        )
+        self._openai_key_entry = ttk.Entry(
+            openai_sub, textvariable=self._openai_key_var, show="*", width=28
+        )
+        self._openai_key_entry.grid(row=1, column=1, sticky="w", padx=(4, 6), pady=(6, 0))
+        self._show_openai_key = False
+        self._openai_key_toggle_btn = ttk.Button(
+            openai_sub, text="Anzeigen", command=self._toggle_openai_key_visibility
+        )
+        self._openai_key_toggle_btn.grid(row=1, column=2, sticky="w", pady=(6, 0))
+
+    def _build_textveredelung_section(self, parent: tk.Widget, pad: dict) -> None:
+        frame = ttk.LabelFrame(parent, text="Textveredelung (optional)")
+        frame.pack(fill="x", pady=(0, 8))
+
+        self._mode_var = tk.StringVar(master=self, value=self._settings.mode)
+        ttk.Radiobutton(
+            frame, text="Direkt (keine Nachbearbeitung)",
+            variable=self._mode_var, value="direkt",
+        ).grid(row=0, column=0, columnspan=3, sticky="w", padx=10, pady=(8, 2))
+        ttk.Radiobutton(
+            frame, text="Poliert – Konservativ  (nur Fehler & Füllwörter)",
+            variable=self._mode_var, value="poliert_konservativ",
+        ).grid(row=1, column=0, columnspan=3, sticky="w", padx=10, pady=2)
+        ttk.Radiobutton(
+            frame, text="Poliert – Ausgefeilt  (vollständige Überarbeitung, E-Mail-Format)",
+            variable=self._mode_var, value="poliert_ausgefeilt",
+        ).grid(row=2, column=0, columnspan=3, sticky="w", padx=10, pady=2)
+
+        ttk.Label(frame, text="Claude API Key:").grid(
+            row=3, column=0, sticky="w", padx=10, pady=(6, 8)
+        )
+        self._api_key_var = tk.StringVar(master=self, value=self._settings.claude_api_key)
+        self._api_entry = ttk.Entry(
+            frame, textvariable=self._api_key_var, show="*", width=28
+        )
+        self._api_entry.grid(row=3, column=1, sticky="w", pady=(6, 8))
+        self._show_key = False
+        ttk.Button(frame, text="Anzeigen", command=self._toggle_key_visibility).grid(
+            row=3, column=2, sticky="w", padx=(6, 10), pady=(6, 8)
+        )
+
+    def _build_system_section(self, parent: tk.Widget, pad: dict) -> None:
+        frame = ttk.LabelFrame(parent, text="System")
+        frame.pack(fill="x", pady=(0, 0))
+
         from blitztext import autostart
         self._autostart_var = tk.BooleanVar(master=self, value=autostart.is_enabled())
         ttk.Checkbutton(
-            self, text="Mit Windows starten", variable=self._autostart_var
-        ).grid(row=7, column=0, columnspan=3, sticky="w", **pad)
+            frame, text="Mit Windows starten", variable=self._autostart_var
+        ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 4))
 
-        # --- Hilfsfunktionen ---
-        utils_frame = ttk.Frame(self)
-        utils_frame.grid(row=8, column=0, columnspan=3, sticky="w", **pad)
+        utils_frame = ttk.Frame(frame)
+        utils_frame.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
         ttk.Button(utils_frame, text="Log anzeigen", command=self._open_log).pack(
             side="left", padx=(0, 8)
         )
@@ -214,17 +292,21 @@ class SettingsWindow(tk.Tk):
             command=self._pick_and_transcribe_file,
         ).pack(side="left")
 
-        # --- Buttons ---
-        btn_frame = ttk.Frame(self)
-        btn_frame.grid(row=9, column=0, columnspan=3, pady=12)
-        ttk.Button(btn_frame, text="Speichern", command=self._save).pack(
-            side="left", padx=8
-        )
-        ttk.Button(btn_frame, text="Abbrechen", command=self.destroy).pack(
-            side="left", padx=8
-        )
+    # ------------------------------------------------------------------
+    # Spracherkennung: Felder je nach gewähltem Backend (de)aktivieren
+    # ------------------------------------------------------------------
 
-        self.columnconfigure(1, weight=1)
+    def _on_backend_change(self) -> None:
+        is_local = self._backend_var.get() == "local"
+        self._whisper_model_cb.config(state="readonly" if is_local else "disabled")
+        self._whisper_device_cb.config(state="readonly" if is_local else "disabled")
+        self._openai_model_cb.config(state="disabled" if is_local else "readonly")
+        self._openai_key_entry.config(state="disabled" if is_local else "normal")
+        self._openai_key_toggle_btn.config(state="disabled" if is_local else "normal")
+
+    def _toggle_openai_key_visibility(self) -> None:
+        self._show_openai_key = not self._show_openai_key
+        self._openai_key_entry.config(show="" if self._show_openai_key else "*")
 
     # ------------------------------------------------------------------
     # Hotkey-Aufnahme
@@ -313,6 +395,9 @@ class SettingsWindow(tk.Tk):
         self._settings.language = self._lang_var.get()
         self._settings.whisper_model = self._whisper_model_var.get()
         self._settings.whisper_device = self._whisper_device_var.get()
+        self._settings.transcription_backend = self._backend_var.get()
+        self._settings.openai_api_key = self._openai_key_var.get()
+        self._settings.openai_transcribe_model = self._openai_model_var.get()
         self._settings.autostart = self._autostart_var.get()
 
         settings_mod.save(self._settings)
@@ -321,6 +406,14 @@ class SettingsWindow(tk.Tk):
             autostart.enable()
         else:
             autostart.disable()
+
+        if self._settings.transcription_backend == "openai" and not self._settings.openai_api_key:
+            messagebox.showwarning(
+                "Blitztext",
+                "Kein OpenAI API Key eingetragen – die Cloud-Spracherkennung "
+                "funktioniert erst, wenn einer eingetragen wird.\n\n"
+                "Die Einstellungen wurden trotzdem gespeichert.",
+            )
 
         self._on_save(self._settings)
         self.destroy()
