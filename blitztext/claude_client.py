@@ -29,7 +29,8 @@ SYSTEM_PROMPT_AUSGEFEILT = (
 
 
 class MissingAPIKeyError(Exception):
-    """Wird geworfen, wenn kein Claude API Key konfiguriert ist."""
+    """Wird geworfen, wenn kein API Key für den gewählten Textveredelung-Anbieter
+    konfiguriert ist (Claude oder OpenAI, siehe auch openai_polish.py)."""
 
 
 class ClaudeClient:

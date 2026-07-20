@@ -22,6 +22,7 @@ def _config_path() -> str:
 class Settings:
     hotkey: str = "ctrl+shift+space"
     mode: str = "direkt"          # "direkt" | "poliert_konservativ" | "poliert_ausgefeilt"
+    polish_provider: str = "claude"  # "claude" | "openai" – nur relevant, wenn mode != "direkt"
     claude_api_key: str = ""
     autostart: bool = False
     language: str = "de"          # Whisper-Sprachcode oder "" für auto-detect

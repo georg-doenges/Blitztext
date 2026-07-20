@@ -41,6 +41,7 @@ log = logging.getLogger(__name__)
 from blitztext.claude_client import ClaudeClient, MissingAPIKeyError
 from blitztext.hotkey import HotkeyManager
 from blitztext.inserter import get_foreground_hwnd, insert
+from blitztext.openai_polish import OpenAIPolishClient
 from blitztext.recorder import AudioRecorder
 from blitztext.transcriber import Transcriber
 from blitztext.tray import IDLE, PROCESSING, RECORDING, TrayApp
@@ -76,6 +77,7 @@ class BlitztextApp:
         self._recorder = AudioRecorder()
         self._transcriber = _create_transcriber(self._settings)
         self._claude = ClaudeClient(api_key=self._settings.claude_api_key)
+        self._openai_polish = OpenAIPolishClient(api_key=self._settings.openai_api_key)
 
         self._worker_queue: queue.Queue = queue.Queue()
         self._state_lock = threading.Lock()
@@ -180,6 +182,15 @@ class BlitztextApp:
         self._worker_queue.put((audio, self._foreground_hwnd))
 
     # ------------------------------------------------------------------
+    # Textveredelung (Claude oder OpenAI, je nach settings.polish_provider)
+    # ------------------------------------------------------------------
+
+    def _reformulate(self, text: str, mode: str) -> str:
+        if self._settings.polish_provider == "openai":
+            return self._openai_polish.reformulate(text, mode=mode)
+        return self._claude.reformulate(text, mode=mode)
+
+    # ------------------------------------------------------------------
     # Worker Loop (läuft auf Worker Thread)
     # ------------------------------------------------------------------
 
@@ -214,18 +225,19 @@ class BlitztextApp:
                 # Modus
                 if self._settings.mode in ("poliert_konservativ", "poliert_ausgefeilt"):
                     try:
-                        text = self._claude.reformulate(text, mode=self._settings.mode)
-                        log.info("Claude-Ergebnis: %r", text)
+                        text = self._reformulate(text, self._settings.mode)
+                        log.info("Textveredelung-Ergebnis: %r", text)
                     except MissingAPIKeyError:
+                        provider = "OpenAI" if self._settings.polish_provider == "openai" else "Claude"
                         self._tray.notify(
                             "Blitztext",
-                            "Kein Claude API Key – Text wird unverändert eingefügt.",
+                            f"Kein {provider} API Key – Text wird unverändert eingefügt.",
                         )
                     except Exception as e:
-                        log.exception("Claude-Fehler")
+                        log.exception("Textveredelung-Fehler")
                         self._tray.notify(
                             "Blitztext",
-                            f"Claude-Fehler: {e} – Text wird unverändert eingefügt.",
+                            f"Textveredelung-Fehler: {e} – Text wird unverändert eingefügt.",
                         )
 
                 insert(text, hwnd=hwnd)
@@ -275,15 +287,16 @@ class BlitztextApp:
 
             if self._settings.mode in ("poliert_konservativ", "poliert_ausgefeilt"):
                 try:
-                    text = self._claude.reformulate(text, mode=self._settings.mode)
-                    log.info("Claude-Ergebnis (Datei): %r", text)
+                    text = self._reformulate(text, self._settings.mode)
+                    log.info("Textveredelung-Ergebnis (Datei): %r", text)
                 except MissingAPIKeyError:
+                    provider = "OpenAI" if self._settings.polish_provider == "openai" else "Claude"
                     self._tray.notify(
-                        "Blitztext", "Kein Claude API Key – Text wird unverändert kopiert."
+                        "Blitztext", f"Kein {provider} API Key – Text wird unverändert kopiert."
                     )
                 except Exception as e:
-                    log.exception("Claude-Fehler bei Datei-Transkription")
-                    self._tray.notify("Blitztext", f"Claude-Fehler: {e}")
+                    log.exception("Textveredelung-Fehler bei Datei-Transkription")
+                    self._tray.notify("Blitztext", f"Textveredelung-Fehler: {e}")
 
             pyperclip.copy(text)
             self._tray.notify("Blitztext", "Text in Zwischenablage – mit Ctrl+V einfügen.")
@@ -307,6 +320,7 @@ class BlitztextApp:
         old_backend = self._settings.transcription_backend
         self._settings = new_settings
         self._claude.update_api_key(new_settings.claude_api_key)
+        self._openai_polish.update_api_key(new_settings.openai_api_key)
         self._hotkey_mgr.update_hotkey(new_settings.hotkey)
         self._tray.update_settings(new_settings)
 
