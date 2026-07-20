@@ -49,16 +49,32 @@ from blitztext.updater import check_for_updates
 MIN_RECORDING_DURATION = 0.3  # Sekunden
 
 
+def _create_transcriber(settings):
+    """Erstellt das Transkriptions-Backend passend zu settings.transcription_backend.
+
+    Beide Backends (lokal/OpenAI) bieten dieselbe Schnittstelle (is_ready,
+    set_on_ready/set_on_error/set_on_status, transcribe, transcribe_file) –
+    der Rest der App muss nicht wissen, welches gerade aktiv ist.
+    """
+    if settings.transcription_backend == "openai":
+        from blitztext.openai_transcriber import OpenAITranscriber
+        return OpenAITranscriber(
+            api_key=settings.openai_api_key,
+            model=settings.openai_transcribe_model,
+        )
+    return Transcriber(
+        model_name=settings.whisper_model,
+        whisper_device=settings.whisper_device,
+    )
+
+
 class BlitztextApp:
     def __init__(self) -> None:
         self._settings = settings_mod.load()
 
         # Komponenten
         self._recorder = AudioRecorder()
-        self._transcriber = Transcriber(
-            model_name=self._settings.whisper_model,
-            whisper_device=self._settings.whisper_device,
-        )
+        self._transcriber = _create_transcriber(self._settings)
         self._claude = ClaudeClient(api_key=self._settings.claude_api_key)
 
         self._worker_queue: queue.Queue = queue.Queue()
@@ -80,9 +96,9 @@ class BlitztextApp:
             on_activate=self._on_hotkey,
         )
 
-        # Whisper-Callbacks
+        # Transkriptions-Callbacks (lokal oder OpenAI-Cloud, siehe _create_transcriber)
         self._transcriber.set_on_ready(
-            lambda: self._tray.notify("Blitztext", "Whisper bereit – Hotkey aktiv.")
+            lambda: self._tray.notify("Blitztext", "Bereit – Hotkey aktiv.")
         )
         self._transcriber.set_on_error(self._on_whisper_error)
         self._transcriber.set_on_status(
@@ -106,7 +122,12 @@ class BlitztextApp:
         self._worker_thread.start()
 
         if not self._transcriber.is_ready:
-            self._tray.notify("Blitztext", "Whisper-Modell wird geladen …")
+            if self._settings.transcription_backend == "openai":
+                self._tray.notify(
+                    "Blitztext", "Kein OpenAI API Key konfiguriert – bitte in den Einstellungen eintragen."
+                )
+            else:
+                self._tray.notify("Blitztext", "Whisper-Modell wird geladen …")
 
         install_dir = os.path.dirname(os.path.abspath(__file__))
         check_for_updates(
@@ -136,7 +157,12 @@ class BlitztextApp:
 
     def _start_recording(self) -> None:
         if not self._transcriber.is_ready:
-            self._tray.notify("Blitztext", "Whisper wird noch geladen, bitte warten …")
+            if self._settings.transcription_backend == "openai":
+                self._tray.notify(
+                    "Blitztext", "Kein OpenAI API Key konfiguriert – bitte in den Einstellungen eintragen."
+                )
+            else:
+                self._tray.notify("Blitztext", "Whisper wird noch geladen, bitte warten …")
             return
 
         self._is_recording = True
@@ -216,12 +242,12 @@ class BlitztextApp:
     # ------------------------------------------------------------------
 
     def _on_whisper_error(self, message: str) -> None:
-        log.error("Whisper-Fehler: %s", message)
+        log.error("Transkriptions-Backend-Fehler: %s", message)
         import tkinter as tk
         from tkinter import messagebox
         root = tk.Tk()
         root.withdraw()
-        messagebox.showerror("Blitztext – Fehler beim Laden", message)
+        messagebox.showerror("Blitztext – Spracherkennung nicht bereit", message)
         root.destroy()
 
     def _on_transcribe_file(self, file_path: str) -> None:
@@ -278,10 +304,21 @@ class BlitztextApp:
         )
 
     def _apply_settings(self, new_settings) -> None:
+        old_backend = self._settings.transcription_backend
         self._settings = new_settings
         self._claude.update_api_key(new_settings.claude_api_key)
         self._hotkey_mgr.update_hotkey(new_settings.hotkey)
         self._tray.update_settings(new_settings)
+
+        if new_settings.transcription_backend != old_backend:
+            self._tray.notify(
+                "Blitztext",
+                "Wechsel der Spracherkennung wird erst nach einem Neustart von Blitztext aktiv.",
+            )
+        elif new_settings.transcription_backend == "openai":
+            # Key/Modell-Änderung wirkt beim Cloud-Backend sofort, kein Neustart nötig.
+            self._transcriber.update_api_key(new_settings.openai_api_key)
+            self._transcriber.update_model(new_settings.openai_transcribe_model)
 
     def _toggle_mode(self) -> None:
         self._settings.mode = (
