@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 $GITHUB_URL = "https://github.com/georg-doenges/Blitztext.git"
 $PYTHON_MIN  = [version]"3.10"
-$PYTHON_MAX  = [version]"3.13"   # exklusiv
+$PYTHON_MAX  = [version]"3.14"   # exklusiv – 3.14 wird von PyTorch/Whisper-Abhaengigkeiten noch nicht durchgaengig unterstuetzt
 
 function Write-Step { param($msg) Write-Host "`n==> $msg" -ForegroundColor Cyan }
 function Write-OK   { param($msg) Write-Host "    [OK] $msg" -ForegroundColor Green }
@@ -41,9 +41,12 @@ foreach ($cmd in @("python", "python3")) {
     } catch {}
 }
 if (-not $python) {
-    Write-Fail "Python 3.10, 3.11 oder 3.12 wurde nicht gefunden."
+    Write-Fail "Python 3.10 - 3.13 wurde nicht gefunden."
     Write-Warn "Bitte Python installieren: https://www.python.org/downloads/"
     Write-Warn "Wichtig: Haken bei 'Add Python to PATH' setzen!"
+    Write-Warn "Achtung: Der Standard-Download auf python.org bietet evtl. bereits Python 3.14"
+    Write-Warn "an - das wird von Blitztext noch nicht unterstuetzt. Auf der Downloadseite"
+    Write-Warn "unter 'Looking for a specific release?' gezielt eine Python-3.13-Version waehlen."
     Read-Host "`nDruecke Enter zum Beenden"
     exit 1
 }
@@ -196,6 +199,10 @@ $shortcut.TargetPath       = $venvPythonW
 $shortcut.Arguments        = "`"$InstallDir\main.py`""
 $shortcut.WorkingDirectory = $InstallDir
 $shortcut.Description      = "Blitztext - Sprache zu Text"
+$iconPath = "$InstallDir\assets\blitztext.ico"
+if (Test-Path $iconPath) {
+    $shortcut.IconLocation = $iconPath
+}
 $shortcut.Save()
 Write-OK "Verkuepfung 'Blitztext' auf dem Desktop erstellt"
 
@@ -222,8 +229,8 @@ Write-Host "  =============================================" -ForegroundColor Gr
 Write-Host "    Blitztext wurde erfolgreich installiert!" -ForegroundColor Green
 Write-Host "  =============================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Starten:  Doppelklick auf 'Blitztext' auf dem Desktop" -ForegroundColor White
-Write-Host "  Hotkey:   Strg + Umschalt + Leertaste" -ForegroundColor White
-Write-Host "  Stoppen:  Hotkey nochmal druecken" -ForegroundColor White
+Write-Host "  Starten:      Doppelklick auf 'Blitztext' auf dem Desktop" -ForegroundColor White
+Write-Host "  Aufnahme:     Strg + Umschalt + Leertaste (nochmal druecken zum Stoppen)" -ForegroundColor White
+Write-Host "  Einstellungen: Strg + Umschalt + Minus" -ForegroundColor White
 Write-Host ""
 Read-Host "Druecke Enter zum Beenden"

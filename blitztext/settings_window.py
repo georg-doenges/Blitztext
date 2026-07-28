@@ -9,6 +9,7 @@ Gliederung in vier Blöcke (LabelFrames): Aufnahme, Spracherkennung
 """
 from __future__ import annotations
 
+import os
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -28,6 +29,7 @@ def open_settings(
     settings: "Settings",
     on_save: Callable[["Settings"], None],
     on_transcribe_file: Optional[Callable[[str], None]] = None,
+    install_dir: Optional[str] = None,
 ) -> None:
     """Öffnet das Settings-Fenster in einem eigenen Thread (Singleton)."""
     global _window_thread, _window_instance
@@ -41,7 +43,7 @@ def open_settings(
 
         _window_thread = threading.Thread(
             target=_run_window,
-            args=(settings, on_save, on_transcribe_file),
+            args=(settings, on_save, on_transcribe_file, install_dir),
             daemon=True,
             name="SettingsWindow",
         )
@@ -52,10 +54,11 @@ def _run_window(
     settings: "Settings",
     on_save: Callable[["Settings"], None],
     on_transcribe_file: Optional[Callable[[str], None]],
+    install_dir: Optional[str],
 ) -> None:
     global _window_instance
     import gc
-    win = SettingsWindow(settings, on_save, on_transcribe_file)
+    win = SettingsWindow(settings, on_save, on_transcribe_file, install_dir)
     _window_instance = win
     try:
         win.mainloop()
@@ -73,11 +76,13 @@ class SettingsWindow(tk.Tk):
         settings: "Settings",
         on_save: Callable[["Settings"], None],
         on_transcribe_file: Optional[Callable[[str], None]] = None,
+        install_dir: Optional[str] = None,
     ) -> None:
         super().__init__()
         self._settings = settings
         self._on_save = on_save
         self._on_transcribe_file = on_transcribe_file
+        self._install_dir = install_dir or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self._capturing_hotkey = False
 
         self.title("Blitztext – Einstellungen")
@@ -108,6 +113,9 @@ class SettingsWindow(tk.Tk):
         ttk.Button(btn_frame, text="Abbrechen", command=self.destroy).pack(
             side="left", padx=8
         )
+        ttk.Button(btn_frame, text="Hilfe", command=self._open_help).pack(
+            side="left", padx=8
+        )
 
         # Anfangssichtbarkeit der bedingten Detailblöcke setzen
         self._on_backend_change()
@@ -118,7 +126,7 @@ class SettingsWindow(tk.Tk):
         frame.pack(fill="x", pady=(0, 8))
         frame.columnconfigure(1, weight=1)
 
-        ttk.Label(frame, text="Tastenkombination:").grid(
+        ttk.Label(frame, text="Aufnahme starten/stoppen:").grid(
             row=0, column=0, sticky="w", **pad
         )
         self._hotkey_var = tk.StringVar(master=self, value=self._settings.hotkey)
@@ -127,15 +135,39 @@ class SettingsWindow(tk.Tk):
         )
         self._hotkey_entry.grid(row=0, column=1, sticky="ew", **pad)
         self._record_btn = ttk.Button(
-            frame, text="Aufnehmen", command=self._start_hotkey_capture
+            frame, text="Ändern",
+            command=lambda: self._start_hotkey_capture(
+                self._hotkey_var, self._hotkey_hint, self._record_btn
+            ),
         )
         self._record_btn.grid(row=0, column=2, **pad)
 
         self._hotkey_hint = ttk.Label(frame, text="", foreground="gray")
         self._hotkey_hint.grid(row=1, column=0, columnspan=3, sticky="w", **pad)
 
-        ttk.Label(frame, text="Sprache (Whisper):").grid(
+        ttk.Label(frame, text="Einstellungen öffnen:").grid(
             row=2, column=0, sticky="w", **pad
+        )
+        self._settings_hotkey_var = tk.StringVar(
+            master=self, value=self._settings.settings_hotkey
+        )
+        self._settings_hotkey_entry = ttk.Entry(
+            frame, textvariable=self._settings_hotkey_var, width=24, state="readonly"
+        )
+        self._settings_hotkey_entry.grid(row=2, column=1, sticky="ew", **pad)
+        self._settings_hotkey_btn = ttk.Button(
+            frame, text="Ändern",
+            command=lambda: self._start_hotkey_capture(
+                self._settings_hotkey_var, self._settings_hotkey_hint, self._settings_hotkey_btn
+            ),
+        )
+        self._settings_hotkey_btn.grid(row=2, column=2, **pad)
+
+        self._settings_hotkey_hint = ttk.Label(frame, text="", foreground="gray")
+        self._settings_hotkey_hint.grid(row=3, column=0, columnspan=3, sticky="w", **pad)
+
+        ttk.Label(frame, text="Sprache (Whisper):").grid(
+            row=4, column=0, sticky="w", **pad
         )
         self._lang_var = tk.StringVar(master=self, value=self._settings.language)
         lang_cb = ttk.Combobox(
@@ -145,9 +177,9 @@ class SettingsWindow(tk.Tk):
             width=8,
             state="readonly",
         )
-        lang_cb.grid(row=2, column=1, sticky="w", **pad)
+        lang_cb.grid(row=4, column=1, sticky="w", **pad)
         ttk.Label(frame, text="(leer = auto)", foreground="gray").grid(
-            row=2, column=2, sticky="w"
+            row=4, column=2, sticky="w"
         )
 
     def _build_spracherkennung_section(self, parent: tk.Widget, pad: dict) -> None:
@@ -328,7 +360,11 @@ class SettingsWindow(tk.Tk):
             utils_frame,
             text="Audio-Datei transkribieren …",
             command=self._pick_and_transcribe_file,
-        ).pack(side="left")
+        ).pack(side="left", padx=(0, 8))
+        self._update_btn = ttk.Button(
+            utils_frame, text="Nach Updates suchen …", command=self._check_for_updates
+        )
+        self._update_btn.pack(side="left")
 
     # ------------------------------------------------------------------
     # Spracherkennung: Details nur fuer das gewaehlte Backend einblenden
@@ -373,13 +409,21 @@ class SettingsWindow(tk.Tk):
     # Hotkey-Aufnahme
     # ------------------------------------------------------------------
 
-    def _start_hotkey_capture(self) -> None:
+    def _start_hotkey_capture(
+        self, var: tk.StringVar, hint: ttk.Label, btn: ttk.Button
+    ) -> None:
+        if self._capturing_hotkey:
+            return  # bereits eine Aufnahme aktiv (anderes Feld)
         self._capturing_hotkey = True
-        self._hotkey_hint.config(
+        self._capture_var = var
+        self._capture_hint = hint
+        self._capture_btn = btn
+        self._capture_default = var.get()
+        hint.config(
             text="Tastenkombination drücken … (Esc zum Abbrechen)", foreground="blue"
         )
-        self._record_btn.config(state="disabled")
-        self._hotkey_var.set("")
+        btn.config(state="disabled")
+        var.set("")
         self._pressed_keys: set = set()
         self.bind("<KeyPress>", self._on_key_press)
         self.bind("<KeyRelease>", self._on_key_release)
@@ -392,7 +436,7 @@ class SettingsWindow(tk.Tk):
             self._cancel_hotkey_capture()
             return
         self._pressed_keys.add(key)
-        self._hotkey_var.set("+".join(sorted(self._pressed_keys)))
+        self._capture_var.set("+".join(sorted(self._pressed_keys)))
 
     def _on_key_release(self, event: tk.Event) -> None:
         if not self._capturing_hotkey:
@@ -400,29 +444,37 @@ class SettingsWindow(tk.Tk):
         # Bei Loslassen aller Tasten → Aufnahme abschließen
         key = event.keysym.lower()
         self._pressed_keys.discard(key)
-        if not self._pressed_keys and self._hotkey_var.get():
+        if not self._pressed_keys and self._capture_var.get():
             self._finish_hotkey_capture()
 
     def _finish_hotkey_capture(self) -> None:
         self._capturing_hotkey = False
         self.unbind("<KeyPress>")
         self.unbind("<KeyRelease>")
-        self._hotkey_hint.config(text="✓ Gespeichert", foreground="green")
-        self._record_btn.config(state="normal")
-        self.after(2000, lambda: self._hotkey_hint.config(text=""))
+        hint = self._capture_hint
+        btn = self._capture_btn
+        hint.config(text="✓ Gespeichert", foreground="green")
+        btn.config(state="normal")
+        self.after(2000, lambda: hint.config(text=""))
 
     def _cancel_hotkey_capture(self) -> None:
         self._capturing_hotkey = False
         self.unbind("<KeyPress>")
         self.unbind("<KeyRelease>")
-        self._hotkey_var.set(self._settings.hotkey)
-        self._hotkey_hint.config(text="Abgebrochen", foreground="red")
-        self._record_btn.config(state="normal")
-        self.after(2000, lambda: self._hotkey_hint.config(text=""))
+        hint = self._capture_hint
+        btn = self._capture_btn
+        self._capture_var.set(self._capture_default)
+        hint.config(text="Abgebrochen", foreground="red")
+        btn.config(state="normal")
+        self.after(2000, lambda: hint.config(text=""))
 
     # ------------------------------------------------------------------
     # Hilfsmethoden
     # ------------------------------------------------------------------
+
+    def _open_help(self) -> None:
+        from blitztext.help_window import open_help
+        open_help(self, self._settings)
 
     def _open_log(self) -> None:
         import os
@@ -443,6 +495,58 @@ class SettingsWindow(tk.Tk):
         if file_path and self._on_transcribe_file:
             self._on_transcribe_file(file_path)
 
+    # ------------------------------------------------------------------
+    # Update-Prüfung
+    # ------------------------------------------------------------------
+
+    def _check_for_updates(self) -> None:
+        self._update_btn.config(state="disabled", text="Suche nach Updates …")
+        threading.Thread(
+            target=self._check_for_updates_worker, daemon=True, name="UpdateCheck"
+        ).start()
+
+    def _check_for_updates_worker(self) -> None:
+        from blitztext import updater
+        status, detail = updater.check_remote_version(self._install_dir)
+        self.after(0, lambda: self._on_update_check_result(status, detail))
+
+    def _on_update_check_result(self, status: str, detail: str) -> None:
+        self._update_btn.config(state="normal", text="Nach Updates suchen …")
+        if status == "up_to_date":
+            messagebox.showinfo("Blitztext – Update", detail)
+        elif status == "update_available":
+            if messagebox.askyesno(
+                "Blitztext – Update verfügbar", f"{detail}\n\nJetzt installieren?"
+            ):
+                self._update_btn.config(state="disabled", text="Installiere Update …")
+                threading.Thread(
+                    target=self._apply_update_worker, daemon=True, name="UpdateApply"
+                ).start()
+        else:
+            messagebox.showerror("Blitztext – Update", detail)
+
+    def _apply_update_worker(self) -> None:
+        from blitztext import updater
+        status, message = updater.apply_update(self._install_dir)
+        self.after(0, lambda: self._on_update_apply_result(status, message))
+
+    def _on_update_apply_result(self, status: str, message: str) -> None:
+        self._update_btn.config(state="normal", text="Nach Updates suchen …")
+        if status == "needs_manual_reinstall":
+            try:
+                import pyperclip
+                pyperclip.copy(
+                    "irm https://raw.githubusercontent.com/georg-doenges/Blitztext/main/install.ps1 | iex"
+                )
+                message += "\n\n(Befehl wurde in die Zwischenablage kopiert.)"
+            except Exception:
+                pass
+            messagebox.showwarning("Blitztext – Update", message)
+        elif status == "updated":
+            messagebox.showinfo("Blitztext – Update", message)
+        else:
+            messagebox.showerror("Blitztext – Update", message)
+
     def _toggle_key_visibility(self) -> None:
         self._show_key = not self._show_key
         self._api_entry.config(show="" if self._show_key else "*")
@@ -451,6 +555,9 @@ class SettingsWindow(tk.Tk):
         from blitztext import autostart, settings as settings_mod
 
         self._settings.hotkey = self._hotkey_var.get() or self._settings.hotkey
+        self._settings.settings_hotkey = (
+            self._settings_hotkey_var.get() or self._settings.settings_hotkey
+        )
         self._settings.mode = self._mode_var.get()
         self._settings.polish_provider = self._polish_provider_var.get()
         self._settings.claude_api_key = self._api_key_var.get()
@@ -468,6 +575,13 @@ class SettingsWindow(tk.Tk):
             autostart.enable()
         else:
             autostart.disable()
+
+        if self._settings.hotkey.lower() == self._settings.settings_hotkey.lower():
+            messagebox.showwarning(
+                "Blitztext",
+                "Die Tastenkombinationen für Aufnahme und Einstellungen sind identisch – "
+                "nur eine davon wird funktionieren. Bitte eine der beiden ändern.",
+            )
 
         needs_openai_key = (
             self._settings.transcription_backend == "openai"

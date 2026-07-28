@@ -12,6 +12,8 @@ Blitztext ist ein kleines Programm für Windows, das im Hintergrund läuft und p
 
 Python und Git werden beim ersten Start automatisch erkannt. Falls sie noch nicht installiert sind, zeigt das Installationsskript, wo du sie herbekommst.
 
+**Wichtig bei Python:** Blitztext braucht Python 3.10 bis 3.13. Der Standard-Download auf [python.org](https://www.python.org/downloads/) bietet inzwischen möglicherweise bereits Python 3.14 an – das wird von einigen Abhängigkeiten (u. a. PyTorch/Whisper) noch nicht durchgängig unterstützt. Falls nötig, auf der Downloadseite unter „Looking for a specific release?" gezielt eine Python-3.13-Version wählen.
+
 ---
 
 ## Installation
@@ -48,20 +50,17 @@ Doppelklick auf **„Blitztext"** auf dem Desktop. Das Programm erscheint als kl
 |---|---|
 | Aufnahme starten | **Strg + Umschalt + Leertaste** |
 | Aufnahme stoppen | **Strg + Umschalt + Leertaste** (nochmal) |
+| Einstellungen öffnen | **Strg + Umschalt + Minus** |
 
-Der Text erscheint danach automatisch dort, wo du zuletzt getippt hast.
+Der Text erscheint danach automatisch dort, wo du zuletzt getippt hast. Beide Tastenkombinationen lassen sich in den Einstellungen ändern.
 
 ### Das Symbol in der Taskleiste
 
-Das Symbol zeigt an, was Blitztext gerade macht:
+Rechtsklick auf das Symbol öffnet ein Menü mit weiteren Optionen (Modus wechseln, Einstellungen, Beenden). Was Blitztext gerade macht, zeigen zwei kleine Felder unten rechts am Bildschirmrand: ein rotes **„● REC"** während der Aufnahme und ein blaues **„● Processing"** während der Verarbeitung. Beide verschwinden automatisch, sobald der jeweilige Schritt fertig ist.
 
-| Farbe | Bedeutung |
-|---|---|
-| **Grau** | Bereit – wartet auf den Hotkey |
-| **Rot** | Nimmt auf |
-| **Blau** | Verarbeitet die Aufnahme |
+### Hilfe direkt im Programm
 
-Rechtsklick auf das Symbol öffnet ein Menü mit weiteren Optionen.
+Im Einstellungsfenster gibt es unten einen **„Hilfe"**-Button mit einer nach Themen gegliederten Übersicht (Schnellstart, Spracherkennung, Textveredelung, API Keys, Sonstiges) – nützlich, wenn du nicht extra hier auf GitHub nachschauen willst.
 
 ---
 
@@ -104,13 +103,15 @@ Rechtsklick auf das Tray-Symbol → **„Einstellungen …"**
 
 | Einstellung | Beschreibung |
 |---|---|
-| Hotkey | Tastenkürzel ändern (Standard: Strg+Umschalt+Leertaste) |
+| Hotkey (Aufnahme) | Tastenkürzel ändern (Standard: Strg+Umschalt+Leertaste) |
+| Hotkey (Einstellungen) | Tastenkürzel zum Öffnen der Einstellungen (Standard: Strg+Umschalt+Minus) |
 | Sprache | Sprache der Aufnahme (Standard: Deutsch) |
 | Spracherkennung | Lokal (Whisper) oder OpenAI-Cloud, siehe oben |
 | Whisper-Modell / -Gerät | Nur bei „Lokal": Genauigkeit vs. Geschwindigkeit, GPU/CPU-Auswahl |
 | OpenAI-Modell / API Key | Nur bei „OpenAI-Cloud": Modellauswahl und API Key |
-| Claude API Key | Nötig für die Poliert-Modi (Konservativ und Ausgefeilt) |
+| Textveredelung | Direkt oder Poliert (Konservativ/Ausgefeilt), Anbieter Claude oder OpenAI |
 | Autostart | Beim Windows-Start automatisch starten |
+| Nach Updates suchen | Prüft GitHub auf eine neuere Version, siehe unten |
 
 ---
 
@@ -149,6 +150,23 @@ Bei lokaler Spracherkennung wird das Whisper-Modell beim ersten Start herunterge
 
 **In der Eingabeaufforderung (cmd) funktioniert das Einfügen nicht.**
 Das ist eine bekannte Einschränkung. In normalen Programmen wie Word, Outlook oder dem Browser funktioniert alles problemlos.
+
+---
+
+## Updates
+
+Der einfachste Weg: Einstellungen öffnen → Button **„Nach Updates suchen …"** im Bereich „System". Blitztext prüft dann auf GitHub, ob eine neuere Version verfügbar ist, und fragt vor der Installation nach Bestätigung.
+
+- Ist nur der Programmcode betroffen, wird direkt aktualisiert – danach einmal über das Tray-Menü beenden und neu starten.
+- Werden auch neue Programmbibliotheken benötigt (selten, z. B. bei größeren Umbauten), zeigt Blitztext eine Anleitung mit dem passenden Befehl an (bereits in die Zwischenablage kopiert) – dieser Fall braucht das manuelle Ausführen des Installationsskripts, weil Windows Programmbibliotheken sperrt, solange Blitztext läuft.
+
+Alternativ jederzeit manuell möglich, ganz ohne das Programm zu öffnen: Blitztext über das Tray-Menü beenden, dann in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/georg-doenges/Blitztext/main/install.ps1 | iex
+```
+
+Das Skript erkennt eine vorhandene Installation automatisch und aktualisiert sie (kein erneutes Herunterladen von Grund auf, Einstellungen bleiben erhalten).
 
 ---
 

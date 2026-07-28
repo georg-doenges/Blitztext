@@ -21,6 +21,7 @@ def _config_path() -> str:
 @dataclass
 class Settings:
     hotkey: str = "ctrl+shift+space"
+    settings_hotkey: str = "ctrl+shift+minus"  # öffnet das Einstellungsfenster
     mode: str = "direkt"          # "direkt" | "poliert_konservativ" | "poliert_ausgefeilt"
     polish_provider: str = "claude"  # "claude" | "openai" – nur relevant, wenn mode != "direkt"
     claude_api_key: str = ""

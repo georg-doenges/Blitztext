@@ -1,19 +1,19 @@
 """
 TrayApp – System-Tray-Icon mit pystray.
 
-Drei Zustände mit farblich unterschiedlichen Icons (programmatisch mit Pillow):
-  IDLE       – grau   (Bereit)
-  RECORDING  – rot    (Nimmt auf)
-  PROCESSING – blau   (Transkribiert / sendet an Claude)
+Das Icon zeigt das Blitztext-Logo statisch (keine Farbwechsel je Zustand mehr –
+Aufnahme/Verarbeitung werden bereits deutlich sichtbar über die Bildschirm-Badges
+in overlay.py angezeigt, ein zusätzlicher Farbwechsel im Tray wäre redundant).
 
-Das Icon und das Menü können thread-safe aktualisiert werden.
+Menü und Tooltip-Text können thread-safe aktualisiert werden.
 """
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Callable, Optional
 
 import pystray
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from blitztext import overlay
 
@@ -25,58 +25,9 @@ IDLE = "idle"
 RECORDING = "recording"
 PROCESSING = "processing"
 
-_ICON_SIZE = 64
-_COLORS = {
-    IDLE:       ("#6b7280", "#9ca3af"),   # grau (Kreis, Mikrofon)
-    RECORDING:  ("#dc2626", "#f87171"),   # rot
-    PROCESSING: ("#2563eb", "#60a5fa"),   # blau
-}
-
-
-def _make_icon(state: str) -> Image.Image:
-    """Erstellt ein 64×64 Icon für den gegebenen Zustand."""
-    bg_color, mic_color = _COLORS[state]
-    img = Image.new("RGBA", (_ICON_SIZE, _ICON_SIZE), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    # Hintergrundkreis
-    margin = 4
-    draw.ellipse(
-        [margin, margin, _ICON_SIZE - margin, _ICON_SIZE - margin],
-        fill=bg_color,
-    )
-
-    # Einfaches Mikrofon-Symbol
-    cx = _ICON_SIZE // 2
-    # Mikrofon-Körper (abgerundetes Rechteck)
-    mic_w, mic_h = 14, 20
-    mic_top = 10
-    draw.rounded_rectangle(
-        [cx - mic_w // 2, mic_top, cx + mic_w // 2, mic_top + mic_h],
-        radius=7,
-        fill=mic_color,
-    )
-    # Mikrofon-Bogen (U-Form)
-    arc_r = 16
-    arc_y = mic_top + mic_h - arc_r + 4
-    draw.arc(
-        [cx - arc_r, arc_y, cx + arc_r, arc_y + arc_r * 2],
-        start=0, end=180,
-        fill=mic_color,
-        width=3,
-    )
-    # Stiel
-    draw.line([cx, arc_y + arc_r, cx, arc_y + arc_r + 8], fill=mic_color, width=3)
-    draw.line(
-        [cx - 8, arc_y + arc_r + 8, cx + 8, arc_y + arc_r + 8],
-        fill=mic_color,
-        width=3,
-    )
-
-    return img
-
-
-_ICONS = {state: _make_icon(state) for state in (IDLE, RECORDING, PROCESSING)}
+_ASSETS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
+_TRAY_ICON_PATH = os.path.join(_ASSETS_DIR, "icon_tray.png")
+_TRAY_ICON = Image.open(_TRAY_ICON_PATH)
 
 _STATE_LABELS = {
     IDLE:       "Bereit",
@@ -144,7 +95,7 @@ class TrayApp:
 
         self._icon = pystray.Icon(
             name="Blitztext",
-            icon=_ICONS[IDLE],
+            icon=_TRAY_ICON,
             title="Blitztext – Bereit",
             menu=self._build_menu(),
         )
@@ -158,9 +109,9 @@ class TrayApp:
         self._icon.run()
 
     def set_state(self, state: str) -> None:
-        """Wechselt Icon und Tooltip; thread-safe."""
+        """Wechselt Tooltip-Text und Menü; thread-safe. Das Icon-Bild bleibt statisch
+        (Status wird bereits über die Bildschirm-Badges in overlay.py angezeigt)."""
         self._state = state
-        self._icon.icon = _ICONS[state]
         self._icon.title = f"Blitztext – {_STATE_LABELS[state]}"
         self._rebuild_menu()
         overlay.set_recording(state == RECORDING)

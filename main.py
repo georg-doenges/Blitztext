@@ -83,6 +83,7 @@ class BlitztextApp:
         self._state_lock = threading.Lock()
         self._is_recording = False
         self._foreground_hwnd = 0
+        self._install_dir = os.path.dirname(os.path.abspath(__file__))
 
         # Tray (läuft auf Main Thread)
         self._tray = TrayApp(
@@ -92,10 +93,12 @@ class BlitztextApp:
             on_quit=self._quit,
         )
 
-        # Hotkey
+        # Hotkeys
         self._hotkey_mgr = HotkeyManager(
-            hotkey_str=self._settings.hotkey,
-            on_activate=self._on_hotkey,
+            bindings={
+                "record": (self._settings.hotkey, self._on_hotkey),
+                "settings": (self._settings.settings_hotkey, self._open_settings),
+            }
         )
 
         # Transkriptions-Callbacks (lokal oder OpenAI-Cloud, siehe _create_transcriber)
@@ -131,9 +134,8 @@ class BlitztextApp:
             else:
                 self._tray.notify("Blitztext", "Whisper-Modell wird geladen …")
 
-        install_dir = os.path.dirname(os.path.abspath(__file__))
         check_for_updates(
-            install_dir,
+            self._install_dir,
             on_update_found=lambda msg: self._tray.notify("Blitztext – Update", msg),
         )
 
@@ -314,6 +316,7 @@ class BlitztextApp:
             settings=self._settings,
             on_save=self._apply_settings,
             on_transcribe_file=self._on_transcribe_file,
+            install_dir=self._install_dir,
         )
 
     def _apply_settings(self, new_settings) -> None:
@@ -321,7 +324,8 @@ class BlitztextApp:
         self._settings = new_settings
         self._claude.update_api_key(new_settings.claude_api_key)
         self._openai_polish.update_api_key(new_settings.openai_api_key)
-        self._hotkey_mgr.update_hotkey(new_settings.hotkey)
+        self._hotkey_mgr.update_hotkey("record", new_settings.hotkey)
+        self._hotkey_mgr.update_hotkey("settings", new_settings.settings_hotkey)
         self._tray.update_settings(new_settings)
 
         if new_settings.transcription_backend != old_backend:
