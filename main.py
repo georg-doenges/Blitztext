@@ -192,6 +192,14 @@ class BlitztextApp:
             return self._openai_polish.reformulate(text, mode=mode)
         return self._claude.reformulate(text, mode=mode)
 
+    def _space_leak_count(self) -> int:
+        """Anzahl geschützter Leerzeichen, die durch den Aufnahme-Hotkey ins
+        Zielfenster durchgerutscht sein können (Strg+Umschalt+Leertaste ist die
+        native Windows/Office-Tastenkombination für ein geschütztes Leerzeichen –
+        einmal beim Start-, einmal beim Stopp-Tastendruck). 0, wenn der Hotkey
+        keine Leertaste enthält."""
+        return self._settings.hotkey.lower().split("+").count("space") * 2
+
     # ------------------------------------------------------------------
     # Worker Loop (läuft auf Worker Thread)
     # ------------------------------------------------------------------
@@ -242,7 +250,7 @@ class BlitztextApp:
                             f"Textveredelung-Fehler: {e} – Text wird unverändert eingefügt.",
                         )
 
-                insert(text, hwnd=hwnd)
+                insert(text, hwnd=hwnd, delete_before=self._space_leak_count())
                 log.info("Text eingefügt")
 
             except Exception as e:
